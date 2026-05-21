@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#080810">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Racr">
+  <meta name="description" content="Racr Motorsports — Live NASCAR race data, standings, and schedules.">
+  <title>Racr Motorsports</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <style>
+    :root {
+      --bg: #080810;
+      --bg2: #0d0d1a;
+      --accent: #c8ff00;
+      --accent-dim: rgba(200,255,0,0.08);
+      --accent-border: rgba(200,255,0,0.15);
+      --green-dark: #2d5a1b;
+      --green-mid: rgba(45,90,27,0.35);
+      --caution: #ffbe00;
+      --caution-dim: rgba(255,190,0,0.1);
+      --chevy: #ff3b3b;
+      --toyota: #ffd600;
+      --ford: #2979ff;
+      --text: #ffffff;
+      --text-dim: #aaa;
+      --text-mute: #888;
+      --mono: 'Share Tech Mono', monospace;
+      --sans: 'Rajdhani', sans-serif;
+      --purple: #c864ff;
+      --radius: 12px;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html {
+      height: 100%;
+      background: var(--bg);
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* DESKTOP BACKGROUND */
+    @media (min-width: 480px) {
+      body {
+        background: #04040a;
+        background-image: repeating-linear-gradient(
+          0deg, transparent, transparent 40px,
+          rgba(200,255,0,0.015) 40px, rgba(200,255,0,0.015) 41px
+        ), repeating-linear-gradient(
+          90deg, transparent, transparent 40px,
+          rgba(200,255,0,0.015) 40px, rgba(200,255,0,0.015) 41px
+        );
+      }
+    }
+    .scan-line {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      animation: scan 5s linear infinite;
+      opacity: 0.15;
+      pointer-events: none;
+      z-index: 999;
+    }
+    @keyframes scan { 0% { top: 0; } 100% { top: 100vh; } }
+
+    .app-wrapper {
+      max-width: 100%;
+      margin: 0 auto;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+      background: var(--bg);
+    }
+
+    @media (min-width: 768px) {
+      .app-wrapper {
+        max-width: 900px;
+        margin: 0 auto;
+        border-left: 1px solid rgba(200,255,0,0.08);
+        border-right: 1px solid rgba(200,255,0,0.08);
+        box-shadow: 0 0 80px rgba(0,0,0,0.9);
+      }
+      /* Two column layout on desktop */
+      .desktop-layout {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+      .desktop-left {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border-right: 1px solid rgba(255,255,255,0.05);
+      }
+      .desktop-right {
+        width: 340px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+    }
+
+    /* HEADER */
+    .app-header {
+      flex-shrink: 0;
+      padding: calc(14px + var(--safe-top)) 18px 10px;
+      border-bottom: 1px solid var(--green-mid);
+      background: linear-gradient(180deg, rgba(13,13,26,0.99) 0%, rgba(8,8,16,0.99) 100%);
+    }
+    .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .brand-mark { display: flex; align-items: center; gap: 10px; }
+    .brand-checker {
+      display: grid;
+      grid-template-columns: repeat(4, 7px);
+      grid-template-rows: repeat(3, 7px);
+      gap: 1.5px;
+    }
+    .bc { border-radius: 1px; }
+    .bc.g { background: var(--green-dark); }
+    .bc.w { background: var(--accent); }
+    .brand-name { font-size: 22px; font-weight: 700; letter-spacing: 5px; color: var(--text); line-height: 1; }
+    .brand-sub { font-size: 9px; letter-spacing: 5px; color: var(--accent); font-weight: 600; margin-top: 2px; }
+    .status-badge {
+      display: flex; align-items: center; gap: 5px;
+      padding: 5px 11px; border-radius: 20px;
+      background: var(--accent-dim); border: 1px solid var(--accent-border);
+      transition: all 0.3s;
+    }
+    .status-badge.caution-mode { background: var(--caution-dim); border-color: rgba(255,190,0,0.25); }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 1.5s ease-in-out infinite; }
+    .status-dot.yellow { background: var(--caution); }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+    .status-txt { font-size: 10px; letter-spacing: 2px; color: var(--accent); font-weight: 700; }
+    .status-txt.yellow { color: var(--caution); }
+    .race-info-row { display: flex; align-items: center; gap: 8px; }
+    .race-title { font-size: 13px; font-weight: 700; letter-spacing: 0.5px; flex: 1; }
+    .lap-badge { font-family: var(--mono); font-size: 11px; color: var(--text-dim); background: rgba(255,255,255,0.04); padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
+    .lap-badge span { color: var(--text); }
+
+    .stage-bar { display: flex; align-items: center; gap: 8px; padding: 6px 18px; border-bottom: 1px solid rgba(200,255,0,0.06); flex-shrink: 0; transition: all 0.3s; }
+    .stage-lbl { font-size: 9px; letter-spacing: 2px; color: #999; text-transform: uppercase; }
+    .stage-track { flex: 1; height: 2px; background: rgba(255,255,255,0.07); border-radius: 2px; overflow: hidden; }
+    .stage-fill { height: 100%; width: 62%; background: var(--accent); border-radius: 2px; transition: background 0.3s; }
+    .stage-fill.yellow { background: var(--caution); }
+    .stage-pts { font-family: var(--mono); font-size: 10px; color: var(--accent); }
+
+    .caution-banner { display: none; align-items: center; gap: 10px; padding: 8px 18px; background: var(--caution-dim); border-bottom: 1px solid rgba(255,190,0,0.25); animation: cPulse 1.5s ease-in-out infinite; flex-shrink: 0; }
+    @keyframes cPulse { 0%,100%{background:rgba(255,190,0,0.1)} 50%{background:rgba(255,190,0,0.18)} }
+    .caution-banner.visible { display: flex; }
+    .caution-text { font-size: 11px; letter-spacing: 2px; color: var(--caution); font-weight: 700; text-transform: uppercase; flex: 1; }
+    .caution-lap { font-family: var(--mono); font-size: 10px; color: var(--caution); opacity: 0.65; }
+
+    .caution-toggle { display: flex; align-items: center; gap: 8px; padding: 5px 18px; border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; }
+    .toggle-lbl { font-size: 9px; letter-spacing: 2px; color: #888; text-transform: uppercase; flex: 1; }
+    .toggle-btn { font-size: 9px; letter-spacing: 1.5px; padding: 4px 12px; border-radius: 20px; border: 1px solid var(--accent-border); background: transparent; color: var(--accent); cursor: pointer; font-family: var(--sans); font-weight: 700; text-transform: uppercase; }
+    .toggle-btn.active { background: rgba(255,190,0,0.12); border-color: rgba(255,190,0,0.4); color: var(--caution); }
+
+    .section-lbl { font-size: 9px; letter-spacing: 3px; color: #999; text-transform: uppercase; padding: 10px 18px 6px; flex-shrink: 0; }
+
+    /* SCREENS */
+    .screen { display: none; flex-direction: column; flex: 1; overflow: hidden; min-height: 0; }
+    .screen.active { display: flex; }
+
+    /* SCROLLABLE CONTENT */
+    .scroll-content {
+      flex: 1;
+      overflow-y: scroll;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: contain;
+      min-height: 0;
+      padding-bottom: 20px;
+    }
+
+    /* LEADERBOARD */
+    .leaderboard { padding: 0 10px; }
+    .driver-row {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 6px; border-radius: var(--radius); margin-bottom: 4px;
+      cursor: pointer; transition: background 0.15s, opacity 0.3s; position: relative;
+    }
+    .driver-row:active { background: rgba(200,255,0,0.05); }
+    .driver-row.leader { background: rgba(200,255,0,0.06); }
+    .driver-row.caution-dim { opacity: 0.55; }
+    .pos-num { font-family: var(--mono); font-size: 12px; color: #888; width: 16px; text-align: center; flex-shrink: 0; }
+    .pos-num.top3 { color: var(--accent); font-weight: 700; }
+    .driver-photo-wrap { position: relative; flex-shrink: 0; }
+    .driver-photo { width: 38px; height: 38px; border-radius: 50%; background: var(--bg2); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; border: 2px solid transparent; }
+    .driver-photo.chevy { border-color: var(--chevy); box-shadow: 0 0 8px rgba(255,59,59,0.3); }
+    .driver-photo.toyota { border-color: var(--toyota); box-shadow: 0 0 8px rgba(255,214,0,0.3); }
+    .driver-photo.ford { border-color: var(--ford); box-shadow: 0 0 8px rgba(41,121,255,0.3); }
+    .mfr-badge { position: absolute; bottom: -1px; right: -1px; width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid var(--bg); font-size: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+    .mfr-badge.chevy { background: var(--chevy); color: #fff; }
+    .mfr-badge.toyota { background: var(--toyota); color: #000; }
+    .mfr-badge.ford { background: var(--ford); color: #fff; }
+    .fl-badge { position: absolute; top: 4px; right: 4px; width: 15px; height: 15px; border-radius: 50%; background: rgba(200,100,255,0.12); border: 1px solid rgba(200,100,255,0.35); display: flex; align-items: center; justify-content: center; }
+    .fl-badge i { font-size: 8px; color: var(--purple); }
+    .driver-info { flex: 1; min-width: 0; }
+    .driver-name { font-size: 14px; font-weight: 700; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+    .driver-num { font-size: 10px; color: #999; font-family: var(--mono); letter-spacing: 1px; margin-top: 1px; }
+    .driver-stats { text-align: right; flex-shrink: 0; }
+    .gap-time { font-family: var(--mono); font-size: 12px; color: #ddd; line-height: 1.2; }
+    .gap-time.leader-gap { color: var(--accent); font-size: 10px; letter-spacing: 1px; }
+    .gap-time.frozen { color: var(--caution); }
+    .pit-info { font-size: 9px; color: #888; letter-spacing: 0.5px; margin-top: 2px; }
+    .pit-info.fresh { color: var(--accent); opacity: 0.9; }
+    .laps-down { font-size: 9px; color: var(--chevy); letter-spacing: 0.5px; margin-top: 2px; }
+    .pos-change { width: 12px; font-size: 9px; text-align: center; flex-shrink: 0; }
+    .pos-change.up { color: var(--accent); }
+    .pos-change.down { color: var(--chevy); }
+    .pos-change.same { color: #1e1e2e; }
+    .row-divider { height: 1px; background: rgba(255,255,255,0.04); margin: 4px 16px; }
+
+    /* DRIVER DETAIL */
+    .driver-detail { padding: 16px; }
+    .back-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; cursor: pointer; margin-bottom: 16px; background: none; border: none; padding: 0; font-family: var(--sans); font-weight: 700; }
+    .dd-header { display: flex; gap: 14px; align-items: center; margin-bottom: 16px; }
+    .dd-photo { width: 58px; height: 58px; border-radius: 50%; background: var(--bg2); display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700; border: 2.5px solid var(--accent); box-shadow: 0 0 14px rgba(200,255,0,0.2); flex-shrink: 0; }
+    .dd-name { font-size: 20px; font-weight: 700; letter-spacing: 1px; }
+    .dd-meta { font-size: 11px; color: #444; letter-spacing: 1.5px; margin-top: 3px; }
+    .dd-pos-badge { display: inline-flex; align-items: center; margin-top: 6px; padding: 3px 10px; border-radius: 20px; background: var(--accent-dim); border: 1px solid var(--accent-border); }
+    .dd-pos-badge span { font-size: 10px; color: var(--accent); letter-spacing: 1px; font-weight: 700; }
+    .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+    .stat-box { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius); padding: 10px 12px; }
+    .stat-lbl { font-size: 9px; color: #444; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+    .stat-val { font-family: var(--mono); font-size: 20px; color: var(--accent); line-height: 1.1; }
+    .stat-val.white { color: var(--text); }
+    .stat-val.purple { color: var(--purple); }
+    .data-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: var(--radius); padding: 12px; margin-bottom: 10px; }
+    .box-title { font-size: 9px; color: #444; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; }
+    .gap-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
+    .gap-arrow { font-size: 10px; color: #333; }
+    .gap-driver-name { font-size: 13px; font-weight: 700; flex: 1; }
+    .gap-val-ahead { font-family: var(--mono); font-size: 13px; color: var(--chevy); }
+    .gap-val-behind { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+    .gap-self-row { font-size: 13px; color: var(--accent); font-weight: 700; padding: 4px 0; border-top: 1px solid rgba(200,255,0,0.1); border-bottom: 1px solid rgba(200,255,0,0.1); margin: 2px 0; flex: 1; }
+    .pit-entry { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .pit-entry:last-child { border-bottom: none; }
+    .pit-stop-num { font-family: var(--mono); font-size: 10px; color: #444; width: 18px; }
+    .pit-lap-num { font-family: var(--mono); font-size: 12px; color: var(--text); }
+    .pit-lap-lbl { font-size: 10px; color: #444; margin-left: 2px; }
+    .pit-dur { font-family: var(--mono); font-size: 12px; color: var(--accent); margin-left: auto; }
+    .pit-tire { font-size: 9px; letter-spacing: 1px; color: #666; padding: 2px 6px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.07); }
+
+    /* SCREEN HEADER (schedule/standings) */
+    .screen-header { flex-shrink: 0; padding: calc(14px + var(--safe-top)) 18px 10px; border-bottom: 1px solid var(--green-mid); background: linear-gradient(180deg, rgba(13,13,26,0.99), rgba(8,8,16,0.99)); }
+    .screen-header-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .screen-header-title { font-size: 20px; font-weight: 700; letter-spacing: 1px; }
+
+    /* SCHEDULE */
+    .schedule-list { padding: 0 10px; }
+    .schedule-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(45,90,27,0.2); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 10px; }
+    .schedule-card.next { border-color: rgba(200,255,0,0.25); background: rgba(200,255,0,0.025); }
+    .sc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+    .sc-next-badge { font-size: 9px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; font-weight: 700; }
+    .sc-track { font-size: 15px; font-weight: 700; letter-spacing: 0.5px; }
+    .sc-event { font-size: 11px; color: #444; letter-spacing: 1px; margin-top: 2px; }
+    .sc-date { font-family: var(--mono); font-size: 11px; color: #555; }
+    .sc-type { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .sc-badge { font-size: 9px; letter-spacing: 1px; padding: 3px 8px; border-radius: 20px; text-transform: uppercase; font-weight: 700; }
+    .sc-badge.oval { background: rgba(41,121,255,0.1); color: var(--ford); }
+    .sc-badge.road { background: rgba(200,255,0,0.07); color: var(--accent); }
+    .sc-badge.super { background: rgba(255,59,59,0.08); color: var(--chevy); }
+    .sc-badge.dist { background: rgba(255,255,255,0.04); color: #555; }
+    .sc-sessions { margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.04); padding-top: 8px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .sc-session { font-size: 10px; color: #444; }
+    .sc-session span { color: #999; }
+
+    /* STANDINGS */
+    .s-header-row { display: flex; align-items: center; gap: 8px; padding: 5px 18px; border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+    .s-header-lbl { font-size: 9px; letter-spacing: 2px; color: #666; text-transform: uppercase; }
+    .standings-list { }
+    .standings-row { display: flex; align-items: center; gap: 8px; padding: 9px 18px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; }
+    .standings-row:active { background: rgba(200,255,0,0.03); }
+    .s-pos { font-family: var(--mono); font-size: 12px; color: #777; width: 20px; flex-shrink: 0; }
+    .s-pos.top3 { color: var(--accent); }
+    .s-name { flex: 1; font-size: 13px; font-weight: 700; }
+    .s-pts { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+    .s-diff { font-family: var(--mono); font-size: 10px; color: #777; width: 46px; text-align: right; }
+    .s-wins { font-family: var(--mono); font-size: 10px; color: #888; width: 24px; text-align: center; }
+    .p-tag { font-size: 8px; letter-spacing: 1px; padding: 1px 5px; border-radius: 8px; background: rgba(200,255,0,0.07); color: var(--accent); margin-left: 4px; }
+
+    /* PILL NAV */
+    .pill-nav {
+      flex-shrink: 0;
+      display: flex;
+      justify-content: center;
+      padding: 10px 18px calc(14px + var(--safe-bottom));
+      background: linear-gradient(to top, var(--bg) 55%, transparent);
+    }
+    .pill { display: flex; align-items: center; background: rgba(12,12,22,0.97); border: 1px solid var(--green-mid); border-radius: 50px; padding: 5px 6px; gap: 2px; box-shadow: 0 4px 24px rgba(0,0,0,0.5); }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 16px; border-radius: 40px; cursor: pointer; transition: background 0.15s; border: none; background: transparent; }
+    .nav-item.active { background: var(--accent-dim); }
+    .nav-item i { font-size: 18px; color: #666; }
+    .nav-item.active i { color: var(--accent); }
+    .nav-item span { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: #666; font-family: var(--sans); font-weight: 600; }
+    .nav-item.active span { color: var(--accent); }
+
+    .bottom-spacer { height: 20px; flex-shrink: 0; }
+
+    @media (min-width: 480px) {
+      .app-wrapper { border-left: 1px solid rgba(255,255,255,0.04); border-right: 1px solid rgba(255,255,255,0.04); }
+    }
+  </style>
+</head>
+<body>
+<div class="scan-line"></div>
+<div class="app-wrapper">
+
+  <!-- ===== LIVE SCREEN ===== -->
+  <div id="screen-live" class="screen active">
+    <div class="app-header">
+      <div class="header-top">
+        <div class="brand-mark">
+          <div class="brand-checker">
+            <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+            <div class="bc w"></div><div class="bc g"></div><div class="bc w"></div><div class="bc g"></div>
+            <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+          </div>
+          <div>
+            <div class="brand-name">RACR</div>
+            <div class="brand-sub">MOTORSPORTS</div>
+          </div>
+        </div>
+        <div class="status-badge" id="status-badge">
+          <div class="status-dot" id="status-dot"></div>
+          <div class="status-txt" id="status-txt">GREEN</div>
+        </div>
+      </div>
+      <div class="race-info-row">
+        <div class="race-title">Coca-Cola 600 · Charlotte</div>
+        <div class="lap-badge">LAP <span>312</span>/400</div>
+      </div>
+    </div>
+    <div class="stage-bar" id="stage-bar">
+      <div class="stage-lbl">Stage 3</div>
+      <div class="stage-track"><div class="stage-fill" id="stage-fill"></div></div>
+      <div class="stage-pts">62 / 100 LAPS</div>
+    </div>
+    <div class="caution-banner" id="caution-banner">
+      <i class="ti ti-alert-triangle" style="font-size:14px;color:#ffbe00;"></i>
+      <div class="caution-text">Caution — Debris Turn 3</div>
+      <div class="caution-lap">LAP 312</div>
+    </div>
+    <div class="caution-toggle">
+      <div class="toggle-lbl">Simulate flag state</div>
+      <button class="toggle-btn" id="caution-btn" onclick="toggleCaution()">Throw Caution</button>
+    </div>
+    <div class="section-lbl">NASCAR Cup Series — Live</div>
+    <div class="scroll-content">
+      <div class="leaderboard">
+        <div class="driver-row leader" onclick="showDriver(0)">
+          <div class="pos-num top3">1</div>
+          <div class="driver-photo-wrap"><div class="driver-photo chevy">KL</div><div class="mfr-badge chevy">C</div></div>
+          <div class="driver-info"><div class="driver-name">Kyle Larson</div><div class="driver-num">#5 · HENDRICK</div></div>
+          <div class="driver-stats"><div class="gap-time leader-gap">LEADER</div><div class="pit-info fresh">FRESH TIRES</div></div>
+          <div class="pos-change same">–</div>
+          <div class="fl-badge"><i class="ti ti-bolt"></i></div>
+        </div>
+        <div class="driver-row" onclick="showDriver(1)">
+          <div class="pos-num top3">2</div>
+          <div class="driver-photo-wrap"><div class="driver-photo ford">JL</div><div class="mfr-badge ford">F</div></div>
+          <div class="driver-info"><div class="driver-name">Joey Logano</div><div class="driver-num">#22 · PENSKE</div></div>
+          <div class="driver-stats"><div class="gap-time">+0.841</div><div class="pit-info">12 LAPS AGO</div></div>
+          <div class="pos-change up">▲</div>
+        </div>
+        <div class="driver-row" onclick="showDriver(2)">
+          <div class="pos-num top3">3</div>
+          <div class="driver-photo-wrap"><div class="driver-photo toyota">DH</div><div class="mfr-badge toyota">T</div></div>
+          <div class="driver-info"><div class="driver-name">Denny Hamlin</div><div class="driver-num">#11 · JOE GIBBS</div></div>
+          <div class="driver-stats"><div class="gap-time">+1.203</div><div class="pit-info">15 LAPS AGO</div></div>
+          <div class="pos-change same">–</div>
+        </div>
+        <div class="driver-row" onclick="showDriver(3)">
+          <div class="pos-num">4</div>
+          <div class="driver-photo-wrap"><div class="driver-photo chevy">AB</div><div class="mfr-badge chevy">C</div></div>
+          <div class="driver-info"><div class="driver-name">Alex Bowman</div><div class="driver-num">#48 · HENDRICK</div></div>
+          <div class="driver-stats"><div class="gap-time">+2.114</div><div class="pit-info">20 LAPS AGO</div></div>
+          <div class="pos-change down">▼</div>
+        </div>
+        <div class="driver-row" onclick="showDriver(4)">
+          <div class="pos-num">5</div>
+          <div class="driver-photo-wrap"><div class="driver-photo toyota">MT</div><div class="mfr-badge toyota">T</div></div>
+          <div class="driver-info"><div class="driver-name">Martin Truex Jr.</div><div class="driver-num">#19 · JOE GIBBS</div></div>
+          <div class="driver-stats"><div class="gap-time">+3.441</div><div class="pit-info fresh">FRESH TIRES</div></div>
+          <div class="pos-change up">▲</div>
+        </div>
+        <div class="row-divider"></div>
+        <div class="driver-row" onclick="showDriver(5)">
+          <div class="pos-num">6</div>
+          <div class="driver-photo-wrap"><div class="driver-photo chevy">CE</div><div class="mfr-badge chevy">C</div></div>
+          <div class="driver-info"><div class="driver-name">Chase Elliott</div><div class="driver-num">#9 · HENDRICK</div></div>
+          <div class="driver-stats"><div class="gap-time">+5.012</div><div class="pit-info">25 LAPS AGO</div></div>
+          <div class="pos-change up">▲</div>
+        </div>
+        <div class="driver-row" onclick="showDriver(6)">
+          <div class="pos-num">7</div>
+          <div class="driver-photo-wrap"><div class="driver-photo ford">AC</div><div class="mfr-badge ford">F</div></div>
+          <div class="driver-info"><div class="driver-name">Austin Cindric</div><div class="driver-num">#2 · PENSKE</div></div>
+          <div class="driver-stats"><div class="gap-time">+6.778</div><div class="pit-info">18 LAPS AGO</div></div>
+          <div class="pos-change down">▼</div>
+        </div>
+        <div class="driver-row" onclick="showDriver(7)">
+          <div class="pos-num">8</div>
+          <div class="driver-photo-wrap"><div class="driver-photo toyota">TG</div><div class="mfr-badge toyota">T</div></div>
+          <div class="driver-info"><div class="driver-name">Ty Gibbs</div><div class="driver-num">#54 · JOE GIBBS</div></div>
+          <div class="driver-stats"><div class="gap-time">+8.201</div><div class="pit-info">30 LAPS AGO</div></div>
+          <div class="pos-change same">–</div>
+        </div>
+        <div class="driver-row" onclick="showDriver(8)">
+          <div class="pos-num">9</div>
+          <div class="driver-photo-wrap"><div class="driver-photo chevy">AD</div><div class="mfr-badge chevy">C</div></div>
+          <div class="driver-info"><div class="driver-name">Austin Dillon</div><div class="driver-num">#3 · RCR</div></div>
+          <div class="driver-stats"><div class="gap-time">+9.554</div><div class="pit-info">22 LAPS AGO</div></div>
+          <div class="pos-change down">▼</div>
+        </div>
+        <div class="driver-row" onclick="showDriver(9)">
+          <div class="pos-num">10</div>
+          <div class="driver-photo-wrap"><div class="driver-photo ford">MM</div><div class="mfr-badge ford">F</div></div>
+          <div class="driver-info"><div class="driver-name">Michael McDowell</div><div class="driver-num">#34 · FRONT ROW</div></div>
+          <div class="driver-stats"><div class="gap-time">+11.203</div><div class="laps-down">1 LAP DOWN</div></div>
+          <div class="pos-change up">▲</div>
+        </div>
+        <div class="bottom-spacer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== DRIVER DETAIL SCREEN ===== -->
+  <div id="screen-driver" class="screen">
+    <div class="app-header">
+      <div class="header-top">
+        <button class="back-btn" onclick="goBack()">
+          <i class="ti ti-arrow-left"></i> Leaderboard
+        </button>
+      </div>
+    </div>
+    <div class="scroll-content">
+      <div class="driver-detail">
+        <div class="dd-header">
+          <div class="dd-photo" id="dd-photo">KL</div>
+          <div>
+            <div class="dd-name" id="dd-name">Kyle Larson</div>
+            <div class="dd-meta" id="dd-meta">#5 · HENDRICK · CHEVROLET</div>
+            <div class="dd-pos-badge"><span id="dd-pos-badge">P1 — LEADER</span></div>
+          </div>
+        </div>
+        <div class="stat-grid">
+          <div class="stat-box"><div class="stat-lbl">Gap to Leader</div><div class="stat-val white" id="dd-gap">–</div></div>
+          <div class="stat-box"><div class="stat-lbl">Laps Led</div><div class="stat-val" id="dd-laps-led">42</div></div>
+          <div class="stat-box"><div class="stat-lbl">Avg Speed</div><div class="stat-val white" id="dd-speed">148.2</div></div>
+          <div class="stat-box"><div class="stat-lbl">Stage Pts</div><div class="stat-val" id="dd-stage-pts">18</div></div>
+          <div class="stat-box"><div class="stat-lbl">Fastest Lap</div><div class="stat-val purple" id="dd-fast-lap">28.441s</div></div>
+          <div class="stat-box"><div class="stat-lbl">Tire Age</div><div class="stat-val white" id="dd-tire-age">2 laps</div></div>
+        </div>
+        <div class="data-box">
+          <div class="box-title">Position History — Last 50 Laps</div>
+          <svg width="100%" height="56" viewBox="0 0 320 56" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#c8ff00" stop-opacity="0.25"/>
+                <stop offset="100%" stop-color="#c8ff00" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <path id="spark-area" fill="url(#sg)"/>
+            <path id="spark-line" fill="none" stroke="#c8ff00" stroke-width="1.8" stroke-linejoin="round"/>
+            <circle id="spark-dot" r="3.5" fill="#c8ff00"/>
+          </svg>
+          <div style="display:flex;justify-content:space-between;margin-top:4px;">
+            <span style="font-size:9px;color:#333;letter-spacing:1px;">LAP 262</span>
+            <span style="font-size:9px;color:#333;letter-spacing:1px;">LAP 312</span>
+          </div>
+        </div>
+        <div class="data-box">
+          <div class="box-title">Gap Tracker</div>
+          <div class="gap-row">
+            <div class="gap-arrow">▲</div>
+            <div class="gap-driver-name" id="gt-ahead" style="color:#555;font-size:12px;">— LEADER —</div>
+            <div class="gap-val-ahead" id="gt-ahead-gap"></div>
+          </div>
+          <div class="gap-row" style="padding:3px 0;">
+            <div style="width:14px;"></div>
+            <div class="gap-self-row" id="gt-self">Kyle Larson</div>
+          </div>
+          <div class="gap-row">
+            <div class="gap-arrow">▼</div>
+            <div class="gap-driver-name" id="gt-behind">Joey Logano</div>
+            <div class="gap-val-behind" id="gt-behind-gap">+0.841</div>
+          </div>
+        </div>
+        <div class="data-box">
+          <div class="box-title">Pit Stop Log</div>
+          <div id="pit-log"></div>
+        </div>
+        <div class="bottom-spacer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SCHEDULE SCREEN ===== -->
+  <div id="screen-schedule" class="screen">
+    <div class="screen-header">
+      <div class="screen-header-brand">
+        <div class="brand-checker">
+          <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+          <div class="bc w"></div><div class="bc g"></div><div class="bc w"></div><div class="bc g"></div>
+          <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+        </div>
+        <div><div class="brand-name">RACR</div><div class="brand-sub">MOTORSPORTS</div></div>
+      </div>
+      <div class="screen-header-title">2025 Schedule</div>
+    </div>
+    <div class="section-lbl">Upcoming Races</div>
+    <div class="scroll-content">
+      <div class="schedule-list">
+        <div class="schedule-card next">
+          <div class="sc-top">
+            <div><div class="sc-next-badge">Next Race</div><div class="sc-track">Nashville Superspeedway</div><div class="sc-event">Wurth 400</div></div>
+            <div class="sc-date">JUN 1</div>
+          </div>
+          <div class="sc-type"><span class="sc-badge oval">Oval</span><span class="sc-badge dist">1.33 mi</span></div>
+          <div class="sc-sessions">
+            <div class="sc-session">Practice <span>Sat 12:00 PM</span></div>
+            <div class="sc-session">Qualifying <span>Sat 2:00 PM</span></div>
+            <div class="sc-session">Race <span>Sun 5:00 PM ET</span></div>
+          </div>
+        </div>
+        <div class="schedule-card">
+          <div class="sc-top"><div><div class="sc-track">Sonoma Raceway</div><div class="sc-event">Toyota / Save Mart 350</div></div><div class="sc-date">JUN 8</div></div>
+          <div class="sc-type"><span class="sc-badge road">Road Course</span><span class="sc-badge dist">1.99 mi</span></div>
+        </div>
+        <div class="schedule-card">
+          <div class="sc-top"><div><div class="sc-track">Iowa Speedway</div><div class="sc-event">Iowa Corn 350</div></div><div class="sc-date">JUN 15</div></div>
+          <div class="sc-type"><span class="sc-badge oval">Oval</span><span class="sc-badge dist">0.875 mi</span></div>
+        </div>
+        <div class="schedule-card">
+          <div class="sc-top"><div><div class="sc-track">New Hampshire Motor Speedway</div><div class="sc-event">Ambetter Health 301</div></div><div class="sc-date">JUN 22</div></div>
+          <div class="sc-type"><span class="sc-badge oval">Oval</span><span class="sc-badge dist">1.058 mi</span></div>
+        </div>
+        <div class="schedule-card">
+          <div class="sc-top"><div><div class="sc-track">Pocono Raceway</div><div class="sc-event">HighPoint.com 400</div></div><div class="sc-date">JUL 13</div></div>
+          <div class="sc-type"><span class="sc-badge super">Superspeedway</span><span class="sc-badge dist">2.5 mi</span></div>
+        </div>
+        <div class="schedule-card">
+          <div class="sc-top"><div><div class="sc-track">Indianapolis Motor Speedway</div><div class="sc-event">Brickyard 400</div></div><div class="sc-date">JUL 20</div></div>
+          <div class="sc-type"><span class="sc-badge road">Road Course</span><span class="sc-badge dist">2.439 mi</span></div>
+        </div>
+        <div class="bottom-spacer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STANDINGS SCREEN ===== -->
+  <div id="screen-standings" class="screen">
+    <div class="screen-header">
+      <div class="screen-header-brand">
+        <div class="brand-checker">
+          <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+          <div class="bc w"></div><div class="bc g"></div><div class="bc w"></div><div class="bc g"></div>
+          <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+        </div>
+        <div><div class="brand-name">RACR</div><div class="brand-sub">MOTORSPORTS</div></div>
+      </div>
+      <div class="screen-header-title">Points Standings</div>
+    </div>
+    <div class="section-lbl">Cup Series — 2025 Season</div>
+    <div class="s-header-row">
+      <div style="width:20px;"></div><div style="width:38px;flex-shrink:0;"></div>
+      <div class="s-header-lbl" style="flex:1;">Driver</div>
+      <div class="s-header-lbl" style="width:24px;text-align:center;">W</div>
+      <div class="s-header-lbl" style="min-width:38px;text-align:right;">PTS</div>
+      <div class="s-header-lbl" style="width:46px;text-align:right;">DIFF</div>
+    </div>
+    <div class="scroll-content">
+      <div class="standings-list">
+        <div class="standings-row"><div class="s-pos top3">1</div><div class="driver-photo-wrap" style="flex-shrink:0;"><div class="driver-photo chevy" style="width:32px;height:32px;font-size:10px;">KL</div><div class="mfr-badge chevy">C</div></div><div class="s-name">Kyle Larson<span class="p-tag">P</span></div><div class="s-wins">3</div><div class="s-pts">612</div><div class="s-diff">–</div></div>
+        <div class="standings-row"><div class="s-pos top3">2</div><div class="driver-photo-wrap" style="flex-shrink:0;"><div class="driver-photo ford" style="width:32px;height:32px;font-size:10px;">JL</div><div class="mfr-badge ford">F</div></div><div class="s-name">Joey Logano<span class="p-tag">P</span></div><div class="s-wins">1</div><div class="s-pts">588</div><div class="s-diff">-24</div></div>
+        <div class="standings-row"><div class="s-pos top3">3</div><div class="driver-photo-wrap" style="flex-shrink:0;"><div class="driver-photo toyota" style="width:32px;height:32px;font-size:10px;">DH</div><div class="mfr-badge toyota">T</div></div><div class="s-name">Denny Hamlin<span class="p-tag">P</span></div><div class="s-wins">2</div><div class="s-pts">571</div><div class="s-diff">-41</div></div>
+        <div class="standings-row"><div class="s-pos">4</div><div class="driver-photo-wrap" style="flex-shrink:0;"><div class="driver-photo chevy" style="width:32px;height:32px;font-size:10px;">CE</div><div class="mfr-badge chevy">C</div></div><div class="s-name">Chase Elliott<span class="p-tag">P</span></div><div class="s-wins">1</div><div class="s-pts">554</div><div class="s-diff">-58</div></div>
+        <div class="standings-row"><div class="s-pos">5</div><div class="driver-photo-wrap" style="flex-shrink:0;"><div class="driver-photo toyota" style="width:32px;height:32px;font-size:10px;">MT</div><div class="mfr-badge toyota">T</div></div><div class="s-name">Martin Truex Jr.<span class="p-tag">P</span></div><div class="s-wins">1</div><div class="s-pts">541</div><div class="s-diff">-71</div></div>
+        <div class="standings-row"><div class="s-pos">6</div><div class="driver-photo-wrap" style="flex-shrink:0;"><div class="driver-photo chevy" style="width:32px;height:32px;font-size:10px;">AB</div><div class="mfr-badge chevy">C</div></div><div class="s-name">Alex Bowman<span class="p-tag">P</span></div><div class="s-wins">0</div><div class="s-pts">528</div><div class="s-diff">-84</div></div>
+        <div class="standings-row"><div class="s-pos">7</div><div class="driver-photo-wrap" style="flex-shrink:0;"><div class="driver-photo ford" style="width:32px;height:32px;font-size:10px;">AC</div><div class="mfr-badge ford">F</div></div><div class="s-name">Austin Cindric<span class="p-tag">P</span></div><div class="s-wins">1</div><div class="s-pts">512</div><div class="s-diff">-100</div></div>
+        <div class="standings-row"><div class="s-pos">8</div><div class="driver-photo-wrap" style="flex-shrink:0;"><div class="driver-photo toyota" style="width:32px;height:32px;font-size:10px;">TG</div><div class="mfr-badge toyota">T</div></div><div class="s-name">Ty Gibbs<span class="p-tag">P</span></div><div class="s-wins">0</div><div class="s-pts">499</div><div class="s-diff">-113</div></div>
+        <div class="standings-row"><div class="s-pos">9</div><div class="driver-photo-wrap" style="flex-shrink:0;"><div class="driver-photo chevy" style="width:32px;height:32px;font-size:10px;">AD</div><div class="mfr-badge chevy">C</div></div><div class="s-name">Austin Dillon</div><div class="s-wins">0</div><div class="s-pts">488</div><div class="s-diff">-124</div></div>
+        <div class="standings-row"><div class="s-pos">10</div><div class="driver-photo-wrap" style="flex-shrink:0;"><div class="driver-photo ford" style="width:32px;height:32px;font-size:10px;">MM</div><div class="mfr-badge ford">F</div></div><div class="s-name">Michael McDowell</div><div class="s-wins">0</div><div class="s-pts">471</div><div class="s-diff">-141</div></div>
+        <div class="bottom-spacer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PILL NAV -->
+  <div class="pill-nav">
+    <div class="pill">
+      <button class="nav-item active" id="nav-live" onclick="switchScreen('live')">
+        <i class="ti ti-radio"></i><span>Live</span>
+      </button>
+      <button class="nav-item" id="nav-schedule" onclick="switchScreen('schedule')">
+        <i class="ti ti-calendar-event"></i><span>Schedule</span>
+      </button>
+      <button class="nav-item" id="nav-standings" onclick="switchScreen('standings')">
+        <i class="ti ti-trophy"></i><span>Standings</span>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var cautionActive = false;
+var drivers = [
+  {name:'Kyle Larson',num:'5',team:'HENDRICK',mfr:'chevy',initials:'KL',pos:'P1',gap:'LEADER',lapsLed:'42',speed:'148.2',stagePts:'18',fastLap:'28.441s',tireAge:'2 laps',ahead:null,aheadGap:'',behind:'Joey Logano',behindGap:'+0.841',positions:[1,1,2,1,1,1,3,2,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],pits:[{stop:1,lap:105,dur:'12.4s',tires:'4 TIRES'},{stop:2,lap:205,dur:'11.8s',tires:'4 TIRES'},{stop:3,lap:310,dur:'11.2s',tires:'4 TIRES'}]},
+  {name:'Joey Logano',num:'22',team:'PENSKE',mfr:'ford',initials:'JL',pos:'P2',gap:'+0.841',lapsLed:'8',speed:'147.9',stagePts:'9',fastLap:'28.612s',tireAge:'12 laps',ahead:'Kyle Larson',aheadGap:'-0.841',behind:'Denny Hamlin',behindGap:'+0.362',positions:[3,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,4,4,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2],pits:[{stop:1,lap:110,dur:'12.8s',tires:'4 TIRES'},{stop:2,lap:210,dur:'12.1s',tires:'4 TIRES'},{stop:3,lap:300,dur:'11.9s',tires:'2 TIRES'}]},
+  {name:'Denny Hamlin',num:'11',team:'JOE GIBBS',mfr:'toyota',initials:'DH',pos:'P3',gap:'+1.203',lapsLed:'22',speed:'147.7',stagePts:'12',fastLap:'28.701s',tireAge:'15 laps',ahead:'Joey Logano',aheadGap:'-0.362',behind:'Alex Bowman',behindGap:'+0.911',positions:[2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3],pits:[{stop:1,lap:108,dur:'13.1s',tires:'4 TIRES'},{stop:2,lap:208,dur:'12.4s',tires:'4 TIRES'},{stop:3,lap:297,dur:'12.0s',tires:'4 TIRES'}]},
+  {name:'Alex Bowman',num:'48',team:'HENDRICK',mfr:'chevy',initials:'AB',pos:'P4',gap:'+2.114',lapsLed:'5',speed:'147.5',stagePts:'7',fastLap:'28.801s',tireAge:'20 laps',ahead:'Denny Hamlin',aheadGap:'-0.911',behind:'Martin Truex Jr.',behindGap:'+1.327',positions:[5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],pits:[{stop:1,lap:112,dur:'12.6s',tires:'4 TIRES'},{stop:2,lap:212,dur:'12.2s',tires:'4 TIRES'},{stop:3,lap:292,dur:'11.7s',tires:'4 TIRES'}]},
+  {name:'Martin Truex Jr.',num:'19',team:'JOE GIBBS',mfr:'toyota',initials:'MT',pos:'P5',gap:'+3.441',lapsLed:'11',speed:'147.2',stagePts:'5',fastLap:'28.921s',tireAge:'2 laps',ahead:'Alex Bowman',aheadGap:'-1.327',behind:'Chase Elliott',behindGap:'+1.571',positions:[4,4,4,4,4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5],pits:[{stop:1,lap:102,dur:'12.9s',tires:'4 TIRES'},{stop:2,lap:202,dur:'12.3s',tires:'4 TIRES'},{stop:3,lap:310,dur:'11.5s',tires:'4 TIRES'}]},
+  {name:'Chase Elliott',num:'9',team:'HENDRICK',mfr:'chevy',initials:'CE',pos:'P6',gap:'+5.012',lapsLed:'3',speed:'146.9',stagePts:'4',fastLap:'29.012s',tireAge:'25 laps',ahead:'Martin Truex Jr.',aheadGap:'-1.571',behind:'Austin Cindric',behindGap:'+1.766',positions:[7,7,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6],pits:[{stop:1,lap:115,dur:'13.2s',tires:'4 TIRES'},{stop:2,lap:215,dur:'12.7s',tires:'4 TIRES'},{stop:3,lap:287,dur:'12.1s',tires:'4 TIRES'}]},
+  {name:'Austin Cindric',num:'2',team:'PENSKE',mfr:'ford',initials:'AC',pos:'P7',gap:'+6.778',lapsLed:'0',speed:'146.7',stagePts:'3',fastLap:'29.101s',tireAge:'18 laps',ahead:'Chase Elliott',aheadGap:'-1.766',behind:'Ty Gibbs',behindGap:'+1.423',positions:[8,8,8,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7],pits:[{stop:1,lap:118,dur:'13.0s',tires:'4 TIRES'},{stop:2,lap:218,dur:'12.5s',tires:'4 TIRES'},{stop:3,lap:294,dur:'12.2s',tires:'2 TIRES'}]},
+  {name:'Ty Gibbs',num:'54',team:'JOE GIBBS',mfr:'toyota',initials:'TG',pos:'P8',gap:'+8.201',lapsLed:'0',speed:'146.4',stagePts:'2',fastLap:'29.201s',tireAge:'30 laps',ahead:'Austin Cindric',aheadGap:'-1.423',behind:'Austin Dillon',behindGap:'+1.353',positions:[9,9,9,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8],pits:[{stop:1,lap:120,dur:'13.4s',tires:'4 TIRES'},{stop:2,lap:220,dur:'12.8s',tires:'4 TIRES'},{stop:3,lap:282,dur:'12.4s',tires:'4 TIRES'}]},
+  {name:'Austin Dillon',num:'3',team:'RCR',mfr:'chevy',initials:'AD',pos:'P9',gap:'+9.554',lapsLed:'0',speed:'146.1',stagePts:'1',fastLap:'29.341s',tireAge:'22 laps',ahead:'Ty Gibbs',aheadGap:'-1.353',behind:'Michael McDowell',behindGap:'+1.649',positions:[10,10,10,10,10,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9],pits:[{stop:1,lap:122,dur:'13.6s',tires:'4 TIRES'},{stop:2,lap:222,dur:'13.0s',tires:'4 TIRES'},{stop:3,lap:290,dur:'12.6s',tires:'4 TIRES'}]},
+  {name:'Michael McDowell',num:'34',team:'FRONT ROW',mfr:'ford',initials:'MM',pos:'P10',gap:'+11.203',lapsLed:'0',speed:'145.8',stagePts:'0',fastLap:'29.512s',tireAge:'35 laps',ahead:'Austin Dillon',aheadGap:'-1.649',behind:null,behindGap:'',positions:[11,11,11,11,11,11,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10],pits:[{stop:1,lap:125,dur:'14.1s',tires:'4 TIRES'},{stop:2,lap:225,dur:'13.5s',tires:'4 TIRES'},{stop:3,lap:285,dur:'13.0s',tires:'4 TIRES'}]}
+];
+
+function toggleCaution() {
+  cautionActive = !cautionActive;
+  var btn = document.getElementById('caution-btn');
+  var banner = document.getElementById('caution-banner');
+  var dot = document.getElementById('status-dot');
+  var txt = document.getElementById('status-txt');
+  var badge = document.getElementById('status-badge');
+  var sf = document.getElementById('stage-fill');
+  var sb = document.getElementById('stage-bar');
+  var rows = document.querySelectorAll('.driver-row');
+  var gaps = document.querySelectorAll('.gap-time');
+  if (cautionActive) {
+    btn.textContent = 'Green Flag'; btn.classList.add('active');
+    banner.classList.add('visible');
+    dot.classList.add('yellow'); txt.textContent = 'CAUTION'; txt.classList.add('yellow');
+    badge.classList.add('caution-mode'); sf.classList.add('yellow');
+    rows.forEach(function(r){r.classList.add('caution-dim');});
+    gaps.forEach(function(g){if(!g.classList.contains('leader-gap'))g.classList.add('frozen');});
+  } else {
+    btn.textContent = 'Throw Caution'; btn.classList.remove('active');
+    banner.classList.remove('visible');
+    dot.classList.remove('yellow'); txt.textContent = 'GREEN'; txt.classList.remove('yellow');
+    badge.classList.remove('caution-mode'); sf.classList.remove('yellow');
+    rows.forEach(function(r){r.classList.remove('caution-dim');});
+    gaps.forEach(function(g){g.classList.remove('frozen');});
+  }
+}
+
+function drawSparkline(positions) {
+  var w=320,h=56,pad=5;
+  var min=Math.min.apply(null,positions),max=Math.max.apply(null,positions),range=max-min||1;
+  var pts=positions.map(function(p,i){return[pad+(i/(positions.length-1))*(w-pad*2),pad+((p-min)/range)*(h-pad*2)];});
+  var line=pts.map(function(p,i){return(i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' ');
+  var area=line+' L'+pts[pts.length-1][0].toFixed(1)+','+h+' L'+pts[0][0].toFixed(1)+','+h+' Z';
+  document.getElementById('spark-line').setAttribute('d',line);
+  document.getElementById('spark-area').setAttribute('d',area);
+  var last=pts[pts.length-1];
+  document.getElementById('spark-dot').setAttribute('cx',last[0].toFixed(1));
+  document.getElementById('spark-dot').setAttribute('cy',last[1].toFixed(1));
+}
+
+function buildPitLog(pits) {
+  var c=document.getElementById('pit-log');c.innerHTML='';
+  pits.forEach(function(p){
+    var d=document.createElement('div');d.className='pit-entry';
+    d.innerHTML='<div class="pit-stop-num">#'+p.stop+'</div><div><span class="pit-lap-num">'+p.lap+'</span><span class="pit-lap-lbl"> lap</span></div><span class="pit-tire">'+p.tires+'</span><div class="pit-dur">'+p.dur+'</div>';
+    c.appendChild(d);
+  });
+}
+
+function showDriver(idx) {
+  var d=drivers[idx];
+  var photo=document.getElementById('dd-photo');
+  photo.textContent=d.initials;
+  var colors={chevy:{b:'#ff3b3b',s:'rgba(255,59,59,0.25)'},toyota:{b:'#ffd600',s:'rgba(255,214,0,0.25)'},ford:{b:'#2979ff',s:'rgba(41,121,255,0.25)'}};
+  photo.style.borderColor=colors[d.mfr].b;
+  photo.style.boxShadow='0 0 14px '+colors[d.mfr].s;
+  var mn={chevy:'CHEVROLET',toyota:'TOYOTA',ford:'FORD'};
+  document.getElementById('dd-name').textContent=d.name;
+  document.getElementById('dd-meta').textContent='#'+d.num+' · '+d.team+' · '+mn[d.mfr];
+  document.getElementById('dd-pos-badge').textContent=d.pos+(idx===0?' — LEADER':'');
+  document.getElementById('dd-gap').textContent=d.gap;
+  document.getElementById('dd-laps-led').textContent=d.lapsLed;
+  document.getElementById('dd-speed').textContent=d.speed+' mph';
+  document.getElementById('dd-stage-pts').textContent=d.stagePts;
+  document.getElementById('dd-fast-lap').textContent=d.fastLap;
+  document.getElementById('dd-tire-age').textContent=d.tireAge;
+  document.getElementById('gt-self').textContent=d.name;
+  document.getElementById('gt-ahead').textContent=d.ahead||'— LEADER —';
+  document.getElementById('gt-ahead-gap').textContent=d.aheadGap;
+  document.getElementById('gt-behind').textContent=d.behind||'— LAST —';
+  document.getElementById('gt-behind-gap').textContent=d.behindGap;
+  drawSparkline(d.positions);
+  buildPitLog(d.pits);
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  document.getElementById('screen-driver').classList.add('active');
+  ['live','schedule','standings'].forEach(function(n){document.getElementById('nav-'+n).classList.remove('active');});
+}
+
+function goBack() {
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  document.getElementById('screen-live').classList.add('active');
+  document.getElementById('nav-live').classList.add('active');
+}
+
+function switchScreen(name) {
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  document.getElementById('screen-'+name).classList.add('active');
+  ['live','schedule','standings'].forEach(function(n){document.getElementById('nav-'+n).classList.remove('active');});
+  document.getElementById('nav-'+name).classList.add('active');
+}
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/sw.js').catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
