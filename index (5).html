@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#111318">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Racr">
+  <meta name="description" content="Racr — Live race data, standings, and schedules for NASCAR, IndyCar, and F1.">
+  <title>Racr</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <style>
+    :root {
+      --bg:            #111318;
+      --bg2:           #181a1f;
+      --bg3:           #1e2026;
+      --accent:        #c8ff00;
+      --accent-dim:    rgba(200,255,0,0.07);
+      --accent-border: rgba(200,255,0,0.16);
+      --caution:       #ffbe00;
+      --chevy:         #ff4444;
+      --toyota:        #ffd600;
+      --ford:          #3b82f6;
+      --text:          #f0f0f2;
+      --text-dim:      #8888a0;
+      --text-mute:     #ffffff;
+      --border:        rgba(255,255,255,0.07);
+      --border-accent: rgba(200,255,0,0.13);
+      --mono:          'Share Tech Mono', monospace;
+      --sans:          'Rajdhani', sans-serif;
+      --purple:        #c864ff;
+      --radius:        10px;
+      --sidebar-w:     224px;
+      --safe-bottom:   env(safe-area-inset-bottom, 0px);
+      --safe-top:      env(safe-area-inset-top, 0px);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+    }
+
+    @media (min-width: 1024px) {
+      body {
+        background-image:
+          repeating-linear-gradient(0deg,  transparent, transparent 48px, rgba(200,255,0,0.011) 48px, rgba(200,255,0,0.011) 49px),
+          repeating-linear-gradient(90deg, transparent, transparent 48px, rgba(200,255,0,0.011) 48px, rgba(200,255,0,0.011) 49px);
+      }
+    }
+
+    /* ── SCAN LINE ── */
+    .scan-line {
+      position: fixed; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      animation: scan 6s linear infinite;
+      opacity: 0.08; pointer-events: none; z-index: 999;
+    }
+    @keyframes scan { 0% { top: 0; } 100% { top: 100vh; } }
+
+    /* ── APP SHELL ── */
+    .app-shell {
+      display: flex;
+      width: 100%;
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    /* ── SIDEBAR (desktop only) ── */
+    .sidebar { display: none; }
+
+    @media (min-width: 1024px) {
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        width: var(--sidebar-w);
+        flex-shrink: 0;
+        background: var(--bg2);
+        border-right: 1px solid var(--border-accent);
+        padding: 28px 0 24px;
+      }
+      .sidebar-brand {
+        padding: 0 20px 24px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 12px;
+      }
+      .sidebar-nav {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        padding: 0 10px;
+      }
+      .sidebar-item {
+        display: flex; align-items: center; gap: 12px;
+        padding: 11px 14px; border-radius: var(--radius);
+        cursor: pointer; border: 1px solid transparent;
+        background: transparent; color: var(--text-dim);
+        font-family: var(--sans); font-size: 14px; font-weight: 600;
+        letter-spacing: 1px; text-transform: uppercase;
+        transition: all 0.15s; width: 100%; text-align: left;
+      }
+      .sidebar-item i { font-size: 18px; }
+      .sidebar-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+      .sidebar-item.active {
+        background: var(--accent-dim); color: var(--accent);
+        border-color: var(--accent-border);
+      }
+      .sidebar-footer {
+        padding: 16px 20px 0;
+        border-top: 1px solid var(--border);
+        margin-top: auto;
+        font-size: 10px; letter-spacing: 1.5px;
+        color: var(--text-mute); text-transform: uppercase;
+      }
+    }
+
+    /* ── MAIN CONTENT ── */
+    .main-content {
+      flex: 1; display: flex; flex-direction: column;
+      overflow: hidden; min-width: 0;
+    }
+
+    /* ── HEADER ── */
+    .app-header {
+      flex-shrink: 0;
+      padding: calc(14px + var(--safe-top)) 20px 14px;
+      border-bottom: 1px solid var(--border-accent);
+      background: var(--bg2);
+    }
+    .header-top {
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 12px; margin-bottom: 10px;
+    }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    @media (min-width: 1024px) { .header-brand { display: none; } }
+
+    /* ── BRAND ── */
+    .brand-mark { display: flex; align-items: center; gap: 10px; }
+    .brand-checker {
+      display: grid;
+      grid-template-columns: repeat(4, 6px);
+      grid-template-rows: repeat(3, 6px);
+      gap: 1.5px;
+    }
+    .bc { border-radius: 1px; }
+    .bc.g { background: #2d5a1b; }
+    .bc.w { background: var(--accent); }
+    .brand-name { font-size: 20px; font-weight: 700; letter-spacing: 5px; line-height: 1; }
+    .brand-sub  { font-size: 8px; letter-spacing: 4px; color: var(--accent); font-weight: 600; margin-top: 2px; }
+
+    /* ── SERIES SELECTOR ── */
+    .series-wrap { position: relative; display: flex; align-items: center; }
+    .series-select {
+      appearance: none; -webkit-appearance: none;
+      background: var(--bg3); border: 1px solid var(--accent-border);
+      color: var(--text); font-family: var(--sans);
+      font-size: 12px; font-weight: 600; letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 7px 30px 7px 12px;
+      border-radius: 8px; cursor: pointer; outline: none;
+      transition: border-color 0.15s;
+    }
+    .series-select:focus { border-color: rgba(200,255,0,0.4); }
+    .series-chevron {
+      position: absolute; right: 9px;
+      pointer-events: none; color: var(--accent); font-size: 13px;
+    }
+
+    /* ── STATUS BADGE ── */
+    .status-badge {
+      display: flex; align-items: center; gap: 5px;
+      padding: 5px 12px; border-radius: 20px;
+      background: var(--accent-dim); border: 1px solid var(--accent-border);
+    }
+    .status-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent); animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+    .status-txt { font-size: 10px; letter-spacing: 2px; color: var(--accent); font-weight: 700; }
+
+    /* ── RACE INFO ROW ── */
+    .race-info-row { display: flex; align-items: center; gap: 10px; }
+    .race-title { font-size: 14px; font-weight: 700; letter-spacing: 0.3px; flex: 1; }
+    .lap-badge {
+      font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+      padding: 4px 10px; border-radius: 6px; white-space: nowrap;
+    }
+    .lap-badge span { color: var(--text); }
+
+    /* ── STAGE BAR ── */
+    .stage-bar {
+      flex-shrink: 0; display: flex; align-items: center; gap: 10px;
+      padding: 8px 20px; border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    .stage-lbl { font-size: 9px; letter-spacing: 2px; color: var(--text-mute); text-transform: uppercase; white-space: nowrap; }
+    .stage-track { flex: 1; height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+    .stage-fill  { height: 100%; width: 0%; background: var(--accent); border-radius: 2px; transition: width 0.4s, background 0.3s; }
+    .stage-pts   { font-family: var(--mono); font-size: 10px; color: var(--text-dim); white-space: nowrap; }
+
+    /* ── SECTION LABEL ── */
+    .section-lbl {
+      flex-shrink: 0;
+      font-size: 9px; letter-spacing: 3px; color: var(--text-mute);
+      text-transform: uppercase; padding: 12px 20px 6px;
+    }
+
+    /* ── SCREENS ── */
+    .screen { display: none; flex-direction: column; flex: 1; overflow: hidden; min-height: 0; }
+    .screen.active { display: flex; }
+
+    /* ── SCROLL CONTAINER ── */
+    .scroll-content {
+      flex: 1; min-height: 0;
+      overflow-y: auto; overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: contain;
+      padding-bottom: calc(16px + var(--safe-bottom));
+      scrollbar-width: none;
+    }
+    .scroll-content::-webkit-scrollbar { display: none; }
+
+    /* ── LEADERBOARD ── */
+    .leaderboard { padding: 8px 12px 0; }
+
+    .driver-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px; border-radius: var(--radius); margin-bottom: 3px;
+      cursor: pointer; transition: background 0.12s;
+      border: 1px solid transparent;
+    }
+    .driver-row:hover  { background: rgba(255,255,255,0.03); border-color: var(--border); }
+    .driver-row:active { background: rgba(255,255,255,0.05); }
+    .driver-row.leader { background: rgba(200,255,0,0.04); border-color: var(--accent-border); }
+
+    .pos-num { font-family: var(--mono); font-size: 13px; color: var(--text-mute); width: 18px; text-align: center; flex-shrink: 0; }
+    .pos-num.top3 { color: var(--accent); }
+
+    .driver-photo-wrap { position: relative; flex-shrink: 0; }
+    .driver-photo {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--bg3); display: flex; align-items: center;
+      justify-content: center; font-size: 11px; font-weight: 700;
+      border: 2px solid transparent;
+    }
+    .driver-photo.chevy  { border-color: var(--chevy);  box-shadow: 0 0 10px rgba(255,68,68,0.2); }
+    .driver-photo.toyota { border-color: var(--toyota); box-shadow: 0 0 10px rgba(255,214,0,0.2); }
+    .driver-photo.ford   { border-color: var(--ford);   box-shadow: 0 0 10px rgba(59,130,246,0.2); }
+
+    .mfr-badge {
+      position: absolute; bottom: -1px; right: -1px;
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 1.5px solid var(--bg2); font-size: 6px;
+      display: flex; align-items: center; justify-content: center; font-weight: 700;
+    }
+    .mfr-badge.chevy  { background: var(--chevy);  color: #fff; }
+    .mfr-badge.toyota { background: var(--toyota); color: #000; }
+    .mfr-badge.ford   { background: var(--ford);   color: #fff; }
+
+    .fl-badge {
+      position: absolute; top: 2px; right: 2px;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: rgba(200,100,255,0.1); border: 1px solid rgba(200,100,255,0.3);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .fl-badge i { font-size: 7px; color: var(--purple); }
+
+    .driver-info { flex: 1; min-width: 0; }
+    .driver-name {
+      font-size: 15px; font-weight: 700; letter-spacing: 0.3px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2;
+    }
+    .driver-num { font-size: 10px; color: var(--text-mute); font-family: var(--mono); letter-spacing: 1px; margin-top: 2px; }
+
+    .driver-stats { text-align: right; flex-shrink: 0; }
+    .gap-time { font-family: var(--mono); font-size: 13px; color: var(--text-dim); line-height: 1.2; }
+    .gap-time.leader-gap { color: var(--accent); font-size: 10px; letter-spacing: 1.5px; font-weight: 700; }
+    .pit-info   { font-size: 9px; color: var(--text-mute); letter-spacing: 0.5px; margin-top: 3px; }
+    .pit-info.fresh { color: var(--accent); opacity: 0.85; }
+    .laps-down  { font-size: 9px; color: var(--chevy); letter-spacing: 0.5px; margin-top: 3px; }
+
+    .pos-change { width: 12px; font-size: 9px; text-align: center; flex-shrink: 0; }
+    .pos-change.up   { color: var(--accent); }
+    .pos-change.down { color: var(--chevy); }
+    .pos-change.same { color: transparent; }
+
+    .row-divider { height: 1px; background: var(--border); margin: 6px 10px; }
+
+    /* ── DRIVER DETAIL ── */
+    .driver-detail { padding: 16px 20px; }
+
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 10px; letter-spacing: 2px; color: var(--accent);
+      text-transform: uppercase; cursor: pointer; margin-bottom: 20px;
+      background: none; border: none; padding: 0;
+      font-family: var(--sans); font-weight: 700;
+    }
+
+    .dd-header { display: flex; gap: 16px; align-items: center; margin-bottom: 20px; }
+    .dd-photo {
+      width: 60px; height: 60px; border-radius: 50%; background: var(--bg3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; font-weight: 700; border: 2px solid var(--accent);
+      box-shadow: 0 0 18px rgba(200,255,0,0.18); flex-shrink: 0;
+    }
+    .dd-name { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+    .dd-meta { font-size: 11px; color: var(--text-dim); letter-spacing: 1.5px; margin-top: 4px; }
+    .dd-pos-badge {
+      display: inline-flex; align-items: center; margin-top: 8px;
+      padding: 3px 10px; border-radius: 20px;
+      background: var(--accent-dim); border: 1px solid var(--accent-border);
+    }
+    .dd-pos-badge span { font-size: 10px; color: var(--accent); letter-spacing: 1px; font-weight: 700; }
+
+    .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+    @media (min-width: 600px) { .stat-grid { grid-template-columns: repeat(3, 1fr); } }
+
+    .stat-box {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px 14px;
+    }
+    .stat-lbl { font-size: 9px; color: var(--text-mute); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; }
+    .stat-val  { font-family: var(--mono); font-size: 20px; color: var(--accent); line-height: 1.1; }
+    .stat-val.white  { color: var(--text); }
+    .stat-val.purple { color: var(--purple); }
+
+    .data-box {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px; margin-bottom: 10px;
+    }
+    .box-title { font-size: 9px; color: var(--text-mute); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+
+    .gap-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
+    .gap-arrow { font-size: 10px; color: var(--text-mute); }
+    .gap-driver-name { font-size: 13px; font-weight: 700; flex: 1; }
+    .gap-val-ahead  { font-family: var(--mono); font-size: 13px; color: var(--chevy); }
+    .gap-val-behind { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+    .gap-self-row {
+      font-size: 13px; color: var(--accent); font-weight: 700;
+      padding: 5px 0; margin: 2px 0; flex: 1;
+      border-top: 1px solid rgba(200,255,0,0.1);
+      border-bottom: 1px solid rgba(200,255,0,0.1);
+    }
+
+    .pit-entry {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 0; border-bottom: 1px solid var(--border);
+    }
+    .pit-entry:last-child { border-bottom: none; }
+    .pit-stop-num { font-family: var(--mono); font-size: 10px; color: var(--text-mute); width: 20px; }
+    .pit-lap-num  { font-family: var(--mono); font-size: 13px; }
+    .pit-lap-lbl  { font-size: 10px; color: var(--text-mute); margin-left: 2px; }
+    .pit-dur { font-family: var(--mono); font-size: 13px; color: var(--accent); margin-left: auto; }
+    .pit-tire {
+      font-size: 9px; letter-spacing: 1px; color: var(--text-mute);
+      padding: 2px 7px; border-radius: 10px; border: 1px solid var(--border);
+    }
+
+    /* ── SCREEN HEADER (schedule / standings) ── */
+    .screen-header {
+      flex-shrink: 0;
+      padding: calc(14px + var(--safe-top)) 20px 14px;
+      border-bottom: 1px solid var(--border-accent);
+      background: var(--bg2);
+    }
+    .screen-header-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .screen-header-title { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+    @media (min-width: 1024px) { .screen-header-brand { display: none; } }
+
+    /* ── SCHEDULE ── */
+    .schedule-list { padding: 8px 14px 0; }
+
+    .schedule-card {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px;
+      transition: border-color 0.15s;
+    }
+    .schedule-card:hover { border-color: rgba(255,255,255,0.12); }
+    .schedule-card.next  { border-color: rgba(200,255,0,0.22); background: rgba(200,255,0,0.02); }
+
+    .sc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .sc-next-badge { font-size: 9px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+    .sc-track { font-size: 16px; font-weight: 700; letter-spacing: 0.3px; }
+    .sc-event { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+    .sc-date  { font-family: var(--mono); font-size: 12px; color: var(--text-mute); white-space: nowrap; }
+
+    .sc-type { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+    .sc-badge {
+      font-size: 9px; letter-spacing: 1px; padding: 3px 9px;
+      border-radius: 20px; text-transform: uppercase; font-weight: 700; border: 1px solid;
+    }
+    .sc-badge.oval  { background: rgba(59,130,246,0.08);  color: var(--ford);      border-color: rgba(59,130,246,0.2); }
+    .sc-badge.road  { background: var(--accent-dim);       color: var(--accent);    border-color: var(--accent-border); }
+    .sc-badge.super { background: rgba(255,68,68,0.07);   color: var(--chevy);     border-color: rgba(255,68,68,0.2); }
+    .sc-badge.dist  { background: rgba(255,255,255,0.03); color: var(--text-mute); border-color: var(--border); }
+
+    .sc-sessions {
+      margin-top: 12px; border-top: 1px solid var(--border);
+      padding-top: 10px; display: flex; gap: 16px; flex-wrap: wrap;
+    }
+    .sc-session { font-size: 11px; color: var(--text-mute); }
+    .sc-session span { color: var(--text-dim); }
+
+    /* ── STANDINGS ── */
+    .s-header-row {
+      flex-shrink: 0; display: flex; align-items: center; gap: 10px;
+      padding: 6px 20px; border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    .s-header-lbl { font-size: 9px; letter-spacing: 2px; color: var(--text-mute); text-transform: uppercase; }
+
+    .standings-list { padding: 4px 0; }
+    .standings-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 20px; border-bottom: 1px solid var(--border);
+      cursor: pointer; transition: background 0.1s;
+    }
+    .standings-row:hover, .standings-row:active { background: rgba(255,255,255,0.025); }
+
+    .s-pos { font-family: var(--mono); font-size: 13px; color: var(--text-mute); width: 22px; flex-shrink: 0; }
+    .s-pos.top3 { color: var(--accent); }
+    .s-name { flex: 1; font-size: 14px; font-weight: 700; }
+    .s-pts  { font-family: var(--mono); font-size: 13px; color: var(--accent); min-width: 40px; text-align: right; }
+    .s-diff { font-family: var(--mono); font-size: 11px; color: var(--text-mute); width: 48px; text-align: right; }
+    .s-wins { font-family: var(--mono); font-size: 11px; color: var(--text-dim); width: 24px; text-align: center; }
+    .p-tag {
+      font-size: 8px; letter-spacing: 1px; padding: 1px 5px; border-radius: 6px;
+      background: var(--accent-dim); color: var(--accent); margin-left: 6px;
+      border: 1px solid var(--accent-border); vertical-align: middle;
+    }
+
+    /* ── PILL NAV (mobile only) ── */
+    .pill-nav {
+      flex-shrink: 0; display: flex; justify-content: center;
+      padding: 10px 18px calc(12px + var(--safe-bottom));
+      background: linear-gradient(to top, var(--bg) 60%, transparent);
+    }
+    @media (min-width: 1024px) { .pill-nav { display: none; } }
+
+    .pill {
+      display: flex; align-items: center;
+      background: rgba(14,14,28,0.98); border: 1px solid var(--border-accent);
+      border-radius: 50px; padding: 5px 6px; gap: 2px;
+      box-shadow: 0 4px 30px rgba(0,0,0,0.6);
+    }
+    .nav-item {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 7px 18px; border-radius: 40px; cursor: pointer;
+      transition: background 0.15s; border: none; background: transparent;
+    }
+    .nav-item.active { background: var(--accent-dim); }
+    .nav-item i { font-size: 18px; color: var(--text-mute); }
+    .nav-item.active i { color: var(--accent); }
+    .nav-item span { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-mute); font-family: var(--sans); font-weight: 600; }
+    .nav-item.active span { color: var(--accent); }
+  </style>
+</head>
+<body>
+<div class="scan-line"></div>
+<div class="app-shell">
+
+  <!-- ── SIDEBAR (desktop) ── -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-mark">
+        <div class="brand-checker">
+          <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+          <div class="bc w"></div><div class="bc g"></div><div class="bc w"></div><div class="bc g"></div>
+          <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+        </div>
+        <div>
+          <div class="brand-name">RACR</div>
+          <div class="brand-sub">MOTORSPORTS</div>
+        </div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="sidebar-item active" id="snav-live" onclick="switchScreen('live')">
+        <i class="ti ti-radio"></i> Live
+      </button>
+      <button class="sidebar-item" id="snav-schedule" onclick="switchScreen('schedule')">
+        <i class="ti ti-calendar-event"></i> Schedule
+      </button>
+      <button class="sidebar-item" id="snav-standings" onclick="switchScreen('standings')">
+        <i class="ti ti-trophy"></i> Standings
+      </button>
+    </nav>
+    <div class="sidebar-footer">Live data · NASCAR.com</div>
+  </aside>
+
+  <!-- ── MAIN CONTENT ── -->
+  <div class="main-content">
+
+    <!-- ══ LIVE SCREEN ══ -->
+    <div id="screen-live" class="screen active">
+      <div class="app-header">
+        <div class="header-top">
+          <div class="header-brand brand-mark">
+            <div class="brand-checker">
+              <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+              <div class="bc w"></div><div class="bc g"></div><div class="bc w"></div><div class="bc g"></div>
+              <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+            </div>
+            <div>
+              <div class="brand-name">RACR</div>
+              <div class="brand-sub">MOTORSPORTS</div>
+            </div>
+          </div>
+          <div class="header-right">
+            <div class="series-wrap">
+              <select class="series-select" id="series-select" onchange="switchSeries(this.value)">
+                <option value="nascar-cup">NASCAR Cup</option>
+                <option value="nascar-xfinity">O'Reilly</option>
+                <option value="nascar-trucks">Trucks</option>
+                <option value="indycar">IndyCar</option>
+                <option value="f1">Formula 1</option>
+              </select>
+              <i class="ti ti-chevron-down series-chevron"></i>
+            </div>
+            <div class="status-badge">
+              <div class="status-dot"></div>
+              <div class="status-txt">GREEN</div>
+            </div>
+          </div>
+        </div>
+        <div class="race-info-row">
+          <div class="race-title" id="race-title">No race currently in progress</div>
+          <div class="lap-badge">LAP <span id="lap-current">—</span>/<span id="lap-total">—</span></div>
+        </div>
+      </div>
+      <div class="stage-bar">
+        <div class="stage-lbl" id="stage-lbl">Stage —</div>
+        <div class="stage-track"><div class="stage-fill" id="stage-fill"></div></div>
+        <div class="stage-pts" id="stage-pts">— / — LAPS</div>
+      </div>
+      <div class="section-lbl" id="live-series-lbl">NASCAR Cup Series — Live</div>
+      <div class="scroll-content">
+        <div class="leaderboard" id="leaderboard"></div>
+      </div>
+    </div>
+
+    <!-- ══ DRIVER DETAIL SCREEN ══ -->
+    <div id="screen-driver" class="screen">
+      <div class="app-header">
+        <div class="header-top">
+          <button class="back-btn" onclick="goBack()">
+            <i class="ti ti-arrow-left"></i> Leaderboard
+          </button>
+        </div>
+      </div>
+      <div class="scroll-content">
+        <div class="driver-detail">
+          <div class="dd-header">
+            <div class="dd-photo" id="dd-photo">--</div>
+            <div>
+              <div class="dd-name" id="dd-name">—</div>
+              <div class="dd-meta" id="dd-meta">—</div>
+              <div class="dd-pos-badge"><span id="dd-pos-badge">—</span></div>
+            </div>
+          </div>
+          <div class="stat-grid">
+            <div class="stat-box"><div class="stat-lbl">Gap to Leader</div><div class="stat-val white" id="dd-gap">—</div></div>
+            <div class="stat-box"><div class="stat-lbl">Laps Led</div><div class="stat-val" id="dd-laps-led">—</div></div>
+            <div class="stat-box"><div class="stat-lbl">Avg Speed</div><div class="stat-val white" id="dd-speed">—</div></div>
+            <div class="stat-box"><div class="stat-lbl">Stage Pts</div><div class="stat-val" id="dd-stage-pts">—</div></div>
+            <div class="stat-box"><div class="stat-lbl">Fastest Lap</div><div class="stat-val purple" id="dd-fast-lap">—</div></div>
+            <div class="stat-box"><div class="stat-lbl">Tire Age</div><div class="stat-val white" id="dd-tire-age">—</div></div>
+          </div>
+          <div class="data-box">
+            <div class="box-title">Position History — Last 50 Laps</div>
+            <svg width="100%" height="56" viewBox="0 0 320 56" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#c8ff00" stop-opacity="0.2"/>
+                  <stop offset="100%" stop-color="#c8ff00" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path id="spark-area" fill="url(#sg)"/>
+              <path id="spark-line" fill="none" stroke="#c8ff00" stroke-width="1.8" stroke-linejoin="round"/>
+              <circle id="spark-dot" r="3" fill="#c8ff00"/>
+            </svg>
+            <div style="display:flex;justify-content:space-between;margin-top:5px;">
+              <span style="font-size:9px;color:var(--text-mute);letter-spacing:1px;" id="spark-lbl-start">LAP —</span>
+              <span style="font-size:9px;color:var(--text-mute);letter-spacing:1px;" id="spark-lbl-end">LAP —</span>
+            </div>
+          </div>
+          <div class="data-box">
+            <div class="box-title">Gap Tracker</div>
+            <div class="gap-row">
+              <div class="gap-arrow">▲</div>
+              <div class="gap-driver-name" id="gt-ahead" style="color:var(--text-mute);font-size:12px;">— LEADER —</div>
+              <div class="gap-val-ahead" id="gt-ahead-gap"></div>
+            </div>
+            <div class="gap-row" style="padding:3px 0;">
+              <div style="width:14px;"></div>
+              <div class="gap-self-row" id="gt-self">—</div>
+            </div>
+            <div class="gap-row">
+              <div class="gap-arrow">▼</div>
+              <div class="gap-driver-name" id="gt-behind">—</div>
+              <div class="gap-val-behind" id="gt-behind-gap"></div>
+            </div>
+          </div>
+          <div class="data-box">
+            <div class="box-title">Pit Stop Log</div>
+            <div id="pit-log"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SCHEDULE SCREEN ══ -->
+    <div id="screen-schedule" class="screen">
+      <div class="screen-header">
+        <div class="screen-header-brand">
+          <div class="brand-checker">
+            <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+            <div class="bc w"></div><div class="bc g"></div><div class="bc w"></div><div class="bc g"></div>
+            <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+          </div>
+          <div><div class="brand-name">RACR</div><div class="brand-sub">MOTORSPORTS</div></div>
+        </div>
+        <div class="screen-header-title">Schedule</div>
+      </div>
+      <div class="section-lbl" id="schedule-lbl">Upcoming Races</div>
+      <div class="scroll-content">
+        <div class="schedule-list" id="schedule-list"></div>
+      </div>
+    </div>
+
+    <!-- ══ STANDINGS SCREEN ══ -->
+    <div id="screen-standings" class="screen">
+      <div class="screen-header">
+        <div class="screen-header-brand">
+          <div class="brand-checker">
+            <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+            <div class="bc w"></div><div class="bc g"></div><div class="bc w"></div><div class="bc g"></div>
+            <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+          </div>
+          <div><div class="brand-name">RACR</div><div class="brand-sub">MOTORSPORTS</div></div>
+        </div>
+        <div class="screen-header-title">Standings</div>
+      </div>
+      <div class="section-lbl" id="standings-lbl">Cup Series — 2025 Season</div>
+      <div class="s-header-row">
+        <div style="width:22px;"></div>
+        <div style="width:40px;flex-shrink:0;"></div>
+        <div class="s-header-lbl" style="flex:1;">Driver</div>
+        <div class="s-header-lbl" style="width:24px;text-align:center;">W</div>
+        <div class="s-header-lbl" style="min-width:40px;text-align:right;">PTS</div>
+        <div class="s-header-lbl" style="width:48px;text-align:right;">DIFF</div>
+      </div>
+      <div class="scroll-content">
+        <div class="standings-list" id="standings-list"></div>
+      </div>
+    </div>
+
+    <!-- ── PILL NAV (mobile) ── -->
+    <div class="pill-nav">
+      <div class="pill">
+        <button class="nav-item active" id="nav-live" onclick="switchScreen('live')">
+          <i class="ti ti-radio"></i><span>Live</span>
+        </button>
+        <button class="nav-item" id="nav-schedule" onclick="switchScreen('schedule')">
+          <i class="ti ti-calendar-event"></i><span>Schedule</span>
+        </button>
+        <button class="nav-item" id="nav-standings" onclick="switchScreen('standings')">
+          <i class="ti ti-trophy"></i><span>Standings</span>
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /.main-content -->
+</div><!-- /.app-shell -->
+
+<script>
+// ── SERIES METADATA ──────────────────────────────────────────────────────────
+const SERIES = {
+  'nascar-cup':     { label: 'NASCAR Cup Series',       season: '2025 Season' },
+  'nascar-xfinity': { label: 'NASCAR Xfinity Series',   season: '2025 Season' },
+  'nascar-trucks':  { label: 'NASCAR Craftsman Trucks',  season: '2025 Season' },
+  'indycar':        { label: 'NTT IndyCar Series',       season: '2025 Season' },
+  'f1':             { label: 'Formula 1',                season: '2025 Season' },
+};
+
+let currentSeries = 'nascar-cup';
+
+// ── LIVE NASCAR DATA INTEGRATION ─────────────────────────────────────────────
+// Cloudflare Worker proxy URL — update this after deploying worker.js
+const PROXY = 'https://racr-nascar-proxy.cotrudesigns.workers.dev';
+
+const FEEDS = {
+  live:      `${PROXY}?feed=https://cf.nascar.com/live/feeds/live-feed.json`,
+  schedule:  `${PROXY}?feed=https://cf.nascar.com/cacher/2026/1/schedule/schedule.json`,
+  standings: `${PROXY}?feed=https://cf.nascar.com/cacher/2026/1/driver_standings/driver_standings.json`,
+};
+
+// Flag state mapping
+const FLAG_STATES = {
+  1: { label: 'GREEN',     cls: 'green'  },
+  2: { label: 'YELLOW',    cls: 'yellow' },
+  3: { label: 'RED',       cls: 'red'    },
+  4: { label: 'CHECKERED', cls: 'green'  },
+  8: { label: 'WARM UP',   cls: 'yellow' },
+  9: { label: 'CHECKERED', cls: 'green'  },
+};
+
+// Manufacturer mapping by team/number
+const MFR_MAP = {
+  chevy: ['chevrolet','chevy'],
+  toyota: ['toyota'],
+  ford: ['ford'],
+};
+
+function getMfr(mfrStr) {
+  if (!mfrStr) return 'chevy';
+  const m = mfrStr.toLowerCase();
+  if (m.includes('toyota')) return 'toyota';
+  if (m.includes('ford')) return 'ford';
+  return 'chevy';
+}
+
+function getInitials(name) {
+  if (!name) return '??';
+  const parts = name.trim().split(' ');
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
+  return name.slice(0,2).toUpperCase();
+}
+
+function formatGap(delta, position) {
+  if (position === 1) return 'LEADER';
+  if (!delta && delta !== 0) return '—';
+  if (typeof delta === 'string' && delta.includes('L')) return delta; // laps down
+  const val = parseFloat(delta);
+  if (isNaN(val)) return delta;
+  if (val === 0) return 'LEADER';
+  return val > 0 ? `+${val.toFixed(3)}` : val.toFixed(3);
+}
+
+let liveData = null;
+let prevPositions = {};
+let pollInterval = null;
+let isRaceLive = false;
+
+// ── LIVE DATA FETCHER ─────────────────────────────────────────────────────────
+async function fetchLiveFeed() {
+  try {
+    const res = await fetch(FEEDS.live);
+    if (!res.ok) throw new Error('Feed error');
+    const data = await res.json();
+    liveData = data;
+    processLiveFeed(data);
+  } catch (e) {
+    console.warn('Live feed error:', e);
+    // Keep showing last good data or placeholder
+  }
+}
+
+function processLiveFeed(data) {
+  const vehicles = data.vehicles || [];
+  const flagState = FLAG_STATES[data.flag_state] || { label: 'GREEN', cls: 'green' };
+  const lapNum = data.lap_number || 0;
+  const lapsInRace = data.laps_in_race || 0;
+  const lapsToGo = data.laps_to_go || 0;
+  const trackName = data.track_name || '';
+  const runName = data.run_name || '';
+  const stageNum = data.stage?.stage_num || 1;
+  const stageLaps = data.stage?.finish_at_lap || lapsInRace;
+
+  // Update race header
+  if (trackName && runName) {
+    const raceTitle = document.getElementById('race-title');
+    const lapCurrent = document.getElementById('lap-current');
+    const lapTotal = document.getElementById('lap-total');
+    if (raceTitle) raceTitle.textContent = `${runName} · ${trackName}`;
+    if (lapCurrent) lapCurrent.textContent = lapNum;
+    if (lapTotal) lapTotal.textContent = lapsInRace;
+  }
+
+  // Update flag status
+  const dot = document.getElementById('status-dot');
+  const txt = document.getElementById('status-txt');
+  const badge = document.getElementById('status-badge');
+  const stageFill = document.getElementById('stage-fill');
+  const stageBar = document.getElementById('stage-bar');
+  const stageLbl = document.getElementById('stage-lbl-text');
+  const stagePts = document.getElementById('stage-pts-text');
+
+  if (dot && txt && badge) {
+    dot.className = 'status-dot' + (flagState.cls === 'yellow' ? ' yellow' : '');
+    txt.textContent = flagState.label;
+    txt.className = 'status-txt' + (flagState.cls === 'yellow' ? ' yellow' : '');
+    badge.className = 'status-badge' + (flagState.cls === 'yellow' ? ' caution-mode' : '');
+  }
+
+  if (stageFill) {
+    stageFill.className = 'stage-fill' + (flagState.cls === 'yellow' ? ' yellow' : '');
+    const pct = stageLaps > 0 ? Math.min((lapNum / stageLaps) * 100, 100) : 62;
+    stageFill.style.width = pct + '%';
+  }
+
+  const stageLblEl = document.getElementById('stage-lbl');
+  const stagePtsEl = document.getElementById('stage-pts');
+  if (stageLblEl) stageLblEl.textContent = `Stage ${stageNum}`;
+  if (stagePtsEl) stagePtsEl.textContent = `${lapNum} / ${lapsInRace} LAPS`;
+
+  // Caution banner
+  const banner = document.getElementById('caution-banner');
+  if (banner) {
+    if (data.flag_state === 2) {
+      banner.classList.add('visible');
+    } else {
+      banner.classList.remove('visible');
+    }
+  }
+
+  // No vehicles = race not live
+  if (!vehicles.length) {
+    isRaceLive = false;
+    return;
+  }
+
+  isRaceLive = true;
+
+  // Sort by running position
+  const sorted = [...vehicles].sort((a, b) => (a.running_position || 99) - (b.running_position || 99));
+
+  // Map to our driver format
+  const fastestLap = sorted.reduce((best, v) => {
+    const spd = parseFloat(v.last_lap_speed) || 0;
+    return spd > best.spd ? { spd, id: v.vehicle_number } : best;
+  }, { spd: 0, id: null });
+
+  const drivers = sorted.map((v, i) => {
+    const pos = v.running_position || (i + 1);
+    const prevPos = prevPositions[v.vehicle_number] || pos;
+    const posChange = pos < prevPos ? 'up' : pos > prevPos ? 'down' : 'same';
+    prevPositions[v.vehicle_number] = pos;
+
+    const mfr = getMfr(v.vehicle_manufacturer || v.manufacturer || v.car_make || v.make || '');
+    const firstName = typeof v.first_name === 'string' ? v.first_name : '';
+    const lastName  = typeof v.last_name  === 'string' ? v.last_name  : '';
+    const name = `${firstName} ${lastName}`.trim() ||
+                 (typeof v.driver_name === 'string' ? v.driver_name : '') ||
+                 `#${v.vehicle_number}`;
+    const lapsDown = v.laps_down > 0 ? `${v.laps_down} LAP${v.laps_down > 1 ? 'S' : ''} DOWN` : null;
+    const pitStopArr = Array.isArray(v.pit_stops) ? v.pit_stops : [];
+    const pitCount = pitStopArr.length;
+    const lastPitStop = pitStopArr[pitStopArr.length - 1] || v.last_pit || null;
+    const lastPitLap = lastPitStop?.pit_in_lap_count || lastPitStop?.pit_in_lap || 0;
+    const lapsSincePit = lastPitLap > 0 ? lapNum - lastPitLap : null;
+
+    return {
+      name,
+      num: v.vehicle_number || '0',
+      team: (typeof v.sponsor_name === 'string' ? v.sponsor_name : '') || (typeof v.team_name === 'string' ? v.team_name : '') || '',
+      mfr,
+      initials: getInitials(name),
+      pos: `P${pos}`,
+      gap: formatGap(v.delta, pos),
+      lapsLed: (v.laps_led || 0).toString(),
+      speed: (v.last_lap_speed || 0).toFixed(1),
+      stagePts: (v.stage_points || 0).toString(),
+      fastLap: v.best_lap_time ? `${v.best_lap_time}s` : '—',
+      tireAge: lapsSincePit !== null ? `${lapsSincePit} laps` : '—',
+      isFastestLap: v.vehicle_number === fastestLap.id,
+      ahead: sorted[i - 1] ? (
+        `${typeof sorted[i-1].first_name === 'string' ? sorted[i-1].first_name : ''} ${typeof sorted[i-1].last_name === 'string' ? sorted[i-1].last_name : ''}`.trim() || `#${sorted[i-1].vehicle_number}`
+      ) : null,
+      aheadGap: i > 0 ? formatGap(v.delta, pos) : '',
+      behind: sorted[i + 1] ? (
+        `${typeof sorted[i+1].first_name === 'string' ? sorted[i+1].first_name : ''} ${typeof sorted[i+1].last_name === 'string' ? sorted[i+1].last_name : ''}`.trim() || `#${sorted[i+1].vehicle_number}`
+      ) : null,
+      behindGap: sorted[i + 1] ? formatGap(sorted[i+1].delta, pos + 1) : '',
+      posChange,
+      freshTires: lapsSincePit !== null && lapsSincePit <= 5,
+      pitInfo: lapsSincePit !== null ? `${lapsSincePit} LAPS AGO` : `${pitCount} STOP${pitCount !== 1 ? 'S' : ''}`,
+      lapsDown,
+      positions: [pos],
+      pits: pitStopArr.map((p, idx) => ({
+        stop: idx + 1,
+        lap: p.pit_in_lap_count || p.pit_in_lap || p.leader_lap || '—',
+        dur: p.duration ? `${parseFloat(p.duration).toFixed(1)}s` : '—',
+        tires: '4 TIRES'
+      })),
+    };
+  });
+
+  renderLeaderboard(drivers);
+  window._liveDrivers = drivers;
+}
+
+async function fetchSchedule() {
+  try {
+    const res = await fetch(FEEDS.schedule);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const races = processSchedule(data);
+    if (races.length) renderSchedule(races);
+  } catch (e) {
+    console.warn('Schedule fetch error:', e);
+  }
+}
+
+function processSchedule(data) {
+  if (!Array.isArray(data)) return cupSchedule;
+  const now = new Date();
+  let nextMarked = false;
+
+  return data.slice(0, 15).map(race => {
+    const raceDate = new Date(race.race_date || race.date_scheduled || '');
+    const isPast = raceDate < now;
+    const isNext = !nextMarked && !isPast;
+    if (isNext) nextMarked = true;
+
+    const typeMap = { 'Superspeedway': 'super', 'Road Course': 'road', 'Oval': 'oval', 'Short Track': 'oval', 'Intermediate': 'oval' };
+    const trackType = typeMap[race.track_type] || 'oval';
+    const dateStr = raceDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+
+    return {
+      track: race.track_name || race.race_name || 'TBD',
+      event: race.race_name || '',
+      date: dateStr || '—',
+      type: trackType,
+      dist: race.track_length ? `${race.track_length} mi` : '—',
+      next: isNext,
+    };
+  });
+}
+
+async function fetchStandings() {
+  try {
+    const res = await fetch(FEEDS.standings);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const standings = processStandings(data);
+    if (standings.length) renderStandings(standings);
+  } catch (e) {
+    console.warn('Standings fetch error:', e);
+  }
+}
+
+function processStandings(data) {
+  if (!Array.isArray(data)) return cupStandings;
+  const leader = data[0]?.points || 0;
+
+  return data.slice(0, 20).map((d, i) => {
+    const mfr = getMfr(d.car_make || '');
+    const name = `${d.first_name || ''} ${d.last_name || ''}`.trim();
+    const pts = d.points || 0;
+    const diff = i === 0 ? '–' : `-${leader - pts}`;
+    return {
+      name: name || d.driver_name || 'Unknown',
+      mfr,
+      initials: getInitials(name),
+      wins: d.wins || 0,
+      pts,
+      diff,
+      playoff: (d.playoff_points || 0) > 0 || i < 16,
+    };
+  });
+}
+
+// ── POLLING LOGIC ─────────────────────────────────────────────────────────────
+function startPolling() {
+  fetchLiveFeed();
+  fetchSchedule();
+  fetchStandings();
+
+  // Poll live feed every 10s during race, 60s otherwise
+  pollInterval = setInterval(() => {
+    fetchLiveFeed();
+  }, isRaceLive ? 10000 : 60000);
+
+  // Refresh schedule + standings every 5 minutes
+  setInterval(() => {
+    fetchSchedule();
+    fetchStandings();
+  }, 300000);
+}
+
+// Override showDriver to use live data when available
+const _origShowDriver = showDriver;
+function showDriver(idx) {
+  const drivers = window._liveDrivers || cupDrivers;
+  const d = drivers[idx];
+  if (!d) return;
+
+  const mfrColors = {
+    chevy:  { border: '#ff4444', shadow: 'rgba(255,68,68,0.25)' },
+    toyota: { border: '#ffd600', shadow: 'rgba(255,214,0,0.25)' },
+    ford:   { border: '#3b82f6', shadow: 'rgba(59,130,246,0.25)' },
+  };
+  const mfrName = { chevy: 'Chevrolet', toyota: 'Toyota', ford: 'Ford' };
+
+  const photo = document.getElementById('dd-photo');
+  photo.textContent = d.initials;
+  photo.style.borderColor = mfrColors[d.mfr].border;
+  photo.style.boxShadow = `0 0 16px ${mfrColors[d.mfr].shadow}`;
+
+  document.getElementById('dd-name').textContent = d.name;
+  document.getElementById('dd-meta').textContent = `#${d.num} · ${String(d.team || '').toUpperCase()} · ${mfrName[d.mfr]}`;
+  document.getElementById('dd-pos-badge').textContent = d.pos + (idx === 0 ? ' — LEADER' : '');
+  document.getElementById('dd-gap').textContent = d.gap;
+  document.getElementById('dd-laps-led').textContent = d.lapsLed;
+  document.getElementById('dd-speed').textContent = `${d.speed} mph`;
+  document.getElementById('dd-stage-pts').textContent = d.stagePts;
+  document.getElementById('dd-fast-lap').textContent = d.fastLap;
+  document.getElementById('dd-tire-age').textContent = d.tireAge;
+  document.getElementById('gt-self').textContent = d.name;
+  document.getElementById('gt-ahead').textContent = d.ahead || '— LEADER —';
+  document.getElementById('gt-ahead-gap').textContent = d.aheadGap;
+  document.getElementById('gt-behind').textContent = d.behind || '— LAST —';
+  document.getElementById('gt-behind-gap').textContent = d.behindGap;
+
+  if (d.positions && d.positions.length > 1) drawSparkline(d.positions);
+  buildPitLog(d.pits || []);
+  setActiveScreen('driver');
+}
+
+// ── PLACEHOLDER DATA (fallback when API unavailable) ─────────────────────────
+const cupDrivers = [
+  {
+    name: 'Kyle Larson',      num: '5',  team: 'Hendrick',  mfr: 'chevy',  initials: 'KL',
+    pos: 'P1',  gap: 'LEADER',  lapsLed: '42', speed: '148.2', stagePts: '18',
+    fastLap: '28.441s', tireAge: '2 laps', isFastestLap: true,
+    ahead: null, aheadGap: '', behind: 'Joey Logano', behindGap: '+0.841',
+    posChange: 'same', freshTires: true, pitInfo: 'FRESH TIRES',
+    positions: [1,1,2,1,1,1,3,2,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    pits: [{stop:1,lap:105,dur:'12.4s',tires:'4 TIRES'},{stop:2,lap:205,dur:'11.8s',tires:'4 TIRES'},{stop:3,lap:310,dur:'11.2s',tires:'4 TIRES'}],
+  },
+  {
+    name: 'Joey Logano',      num: '22', team: 'Penske',    mfr: 'ford',   initials: 'JL',
+    pos: 'P2',  gap: '+0.841', lapsLed: '8',  speed: '147.9', stagePts: '9',
+    fastLap: '28.612s', tireAge: '12 laps',
+    ahead: 'Kyle Larson', aheadGap: '-0.841', behind: 'Denny Hamlin', behindGap: '+0.362',
+    posChange: 'up', pitInfo: '12 LAPS AGO',
+    positions: [3,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,4,4,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2],
+    pits: [{stop:1,lap:110,dur:'12.8s',tires:'4 TIRES'},{stop:2,lap:210,dur:'12.1s',tires:'4 TIRES'},{stop:3,lap:300,dur:'11.9s',tires:'2 TIRES'}],
+  },
+  {
+    name: 'Denny Hamlin',     num: '11', team: 'Joe Gibbs', mfr: 'toyota', initials: 'DH',
+    pos: 'P3',  gap: '+1.203', lapsLed: '22', speed: '147.7', stagePts: '12',
+    fastLap: '28.701s', tireAge: '15 laps',
+    ahead: 'Joey Logano', aheadGap: '-0.362', behind: 'Alex Bowman', behindGap: '+0.911',
+    posChange: 'same', pitInfo: '15 LAPS AGO',
+    positions: [2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3],
+    pits: [{stop:1,lap:108,dur:'13.1s',tires:'4 TIRES'},{stop:2,lap:208,dur:'12.4s',tires:'4 TIRES'},{stop:3,lap:297,dur:'12.0s',tires:'4 TIRES'}],
+  },
+  {
+    name: 'Alex Bowman',      num: '48', team: 'Hendrick',  mfr: 'chevy',  initials: 'AB',
+    pos: 'P4',  gap: '+2.114', lapsLed: '5',  speed: '147.5', stagePts: '7',
+    fastLap: '28.801s', tireAge: '20 laps',
+    ahead: 'Denny Hamlin', aheadGap: '-0.911', behind: 'Chase Elliott', behindGap: '+1.327',
+    posChange: 'down', pitInfo: '20 LAPS AGO',
+    positions: [5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
+    pits: [{stop:1,lap:112,dur:'12.6s',tires:'4 TIRES'},{stop:2,lap:212,dur:'12.2s',tires:'4 TIRES'},{stop:3,lap:292,dur:'11.7s',tires:'4 TIRES'}],
+  },
+  {
+    name: 'Chase Elliott',    num: '9',  team: 'Hendrick',  mfr: 'chevy',  initials: 'CE',
+    pos: 'P5',  gap: '+3.441', lapsLed: '3',  speed: '146.9', stagePts: '5',
+    fastLap: '29.012s', tireAge: '25 laps',
+    ahead: 'Alex Bowman', aheadGap: '-1.327', behind: 'Austin Cindric', behindGap: '+1.571',
+    posChange: 'up', pitInfo: '25 LAPS AGO',
+    positions: [7,7,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6],
+    pits: [{stop:1,lap:115,dur:'13.2s',tires:'4 TIRES'},{stop:2,lap:215,dur:'12.7s',tires:'4 TIRES'},{stop:3,lap:287,dur:'12.1s',tires:'4 TIRES'}],
+  },
+  {
+    name: 'Austin Cindric',   num: '2',  team: 'Penske',    mfr: 'ford',   initials: 'AC',
+    pos: 'P6',  gap: '+5.012', lapsLed: '0',  speed: '146.7', stagePts: '4',
+    fastLap: '29.101s', tireAge: '18 laps',
+    ahead: 'Chase Elliott', aheadGap: '-1.571', behind: 'Ty Gibbs', behindGap: '+1.766',
+    posChange: 'down', pitInfo: '18 LAPS AGO',
+    positions: [8,8,8,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7],
+    pits: [{stop:1,lap:118,dur:'13.0s',tires:'4 TIRES'},{stop:2,lap:218,dur:'12.5s',tires:'4 TIRES'},{stop:3,lap:294,dur:'12.2s',tires:'2 TIRES'}],
+  },
+  {
+    name: 'Ty Gibbs',         num: '54', team: 'Joe Gibbs', mfr: 'toyota', initials: 'TG',
+    pos: 'P7',  gap: '+6.778', lapsLed: '0',  speed: '146.4', stagePts: '3',
+    fastLap: '29.201s', tireAge: '30 laps',
+    ahead: 'Austin Cindric', aheadGap: '-1.766', behind: 'Christopher Bell', behindGap: '+1.423',
+    posChange: 'same', pitInfo: '30 LAPS AGO',
+    positions: [9,9,9,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8],
+    pits: [{stop:1,lap:120,dur:'13.4s',tires:'4 TIRES'},{stop:2,lap:220,dur:'12.8s',tires:'4 TIRES'},{stop:3,lap:282,dur:'12.4s',tires:'4 TIRES'}],
+  },
+  {
+    name: 'Christopher Bell', num: '20', team: 'Joe Gibbs', mfr: 'toyota', initials: 'CB',
+    pos: 'P8',  gap: '+8.201', lapsLed: '0',  speed: '146.1', stagePts: '2',
+    fastLap: '29.341s', tireAge: '22 laps',
+    ahead: 'Ty Gibbs', aheadGap: '-1.423', behind: 'William Byron', behindGap: '+1.353',
+    posChange: 'down', pitInfo: '22 LAPS AGO',
+    positions: [10,10,10,10,10,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9],
+    pits: [{stop:1,lap:122,dur:'13.6s',tires:'4 TIRES'},{stop:2,lap:222,dur:'13.0s',tires:'4 TIRES'},{stop:3,lap:290,dur:'12.6s',tires:'4 TIRES'}],
+  },
+  {
+    name: 'William Byron',    num: '24', team: 'Hendrick',  mfr: 'chevy',  initials: 'WB',
+    pos: 'P9',  gap: '+9.554', lapsLed: '0',  speed: '145.8', stagePts: '1',
+    fastLap: '29.412s', tireAge: '28 laps',
+    ahead: 'Christopher Bell', aheadGap: '-1.353', behind: 'Michael McDowell', behindGap: '+1.649',
+    posChange: 'up', pitInfo: '28 LAPS AGO',
+    positions: [11,11,11,11,11,11,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10],
+    pits: [{stop:1,lap:124,dur:'13.8s',tires:'4 TIRES'},{stop:2,lap:224,dur:'13.2s',tires:'4 TIRES'},{stop:3,lap:288,dur:'12.8s',tires:'4 TIRES'}],
+  },
+  {
+    name: 'Michael McDowell', num: '34', team: 'Front Row', mfr: 'ford',   initials: 'MM',
+    pos: 'P10', gap: '+11.203',lapsLed: '0',  speed: '145.4', stagePts: '0',
+    fastLap: '29.512s', tireAge: '35 laps',
+    ahead: 'William Byron', aheadGap: '-1.649', behind: null, behindGap: '',
+    posChange: 'up', lapsDown: '1 LAP DOWN',
+    positions: [12,12,12,12,12,12,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11],
+    pits: [{stop:1,lap:125,dur:'14.1s',tires:'4 TIRES'},{stop:2,lap:225,dur:'13.5s',tires:'4 TIRES'},{stop:3,lap:285,dur:'13.0s',tires:'4 TIRES'}],
+  },
+];
+
+const cupSchedule = [
+  { track: 'Nashville Superspeedway', event: 'Würth 400',            date: 'JUN 1',  type: 'oval',  dist: '1.33 mi',  next: true, sessions: [{name:'Practice',time:'Sat 12:00 PM'},{name:'Qualifying',time:'Sat 2:00 PM'},{name:'Race',time:'Sun 5:00 PM ET'}] },
+  { track: 'Sonoma Raceway',          event: 'Toyota/Save Mart 350', date: 'JUN 8',  type: 'road',  dist: '1.99 mi' },
+  { track: 'Iowa Speedway',           event: 'Iowa Corn 350',        date: 'JUN 15', type: 'oval',  dist: '0.875 mi' },
+  { track: 'New Hampshire',           event: 'Ambetter Health 301',  date: 'JUN 22', type: 'oval',  dist: '1.058 mi' },
+  { track: 'Pocono Raceway',          event: 'HighPoint.com 400',    date: 'JUL 13', type: 'super', dist: '2.5 mi' },
+  { track: 'Indianapolis',            event: 'Brickyard 400',        date: 'JUL 20', type: 'road',  dist: '2.439 mi' },
+];
+
+const cupStandings = [
+  { name: 'Kyle Larson',       mfr: 'chevy',  initials: 'KL', wins: 3, pts: 612, diff: '–',    playoff: true },
+  { name: 'Joey Logano',       mfr: 'ford',   initials: 'JL', wins: 1, pts: 588, diff: '-24',  playoff: true },
+  { name: 'Denny Hamlin',      mfr: 'toyota', initials: 'DH', wins: 2, pts: 571, diff: '-41',  playoff: true },
+  { name: 'Chase Elliott',     mfr: 'chevy',  initials: 'CE', wins: 1, pts: 554, diff: '-58',  playoff: true },
+  { name: 'Christopher Bell',  mfr: 'toyota', initials: 'CB', wins: 1, pts: 541, diff: '-71',  playoff: true },
+  { name: 'Alex Bowman',       mfr: 'chevy',  initials: 'AB', wins: 0, pts: 528, diff: '-84',  playoff: true },
+  { name: 'Austin Cindric',    mfr: 'ford',   initials: 'AC', wins: 1, pts: 512, diff: '-100', playoff: true },
+  { name: 'Ty Gibbs',          mfr: 'toyota', initials: 'TG', wins: 0, pts: 499, diff: '-113', playoff: true },
+  { name: 'William Byron',     mfr: 'chevy',  initials: 'WB', wins: 0, pts: 488, diff: '-124', playoff: false },
+  { name: 'Michael McDowell',  mfr: 'ford',   initials: 'MM', wins: 0, pts: 471, diff: '-141', playoff: false },
+];
+
+// ── RENDER HELPERS ────────────────────────────────────────────────────────────
+const mfrLabel = { chevy: 'C', toyota: 'T', ford: 'F' };
+
+function renderLeaderboard(drivers) {
+  document.getElementById('leaderboard').innerHTML = drivers.map((d, i) => `
+    <div class="driver-row${i === 0 ? ' leader' : ''}" onclick="showDriver(${i})">
+      <div class="pos-num${i < 3 ? ' top3' : ''}">${i + 1}</div>
+      <div class="driver-photo-wrap">
+        <div class="driver-photo ${d.mfr}">${d.initials}</div>
+        <div class="mfr-badge ${d.mfr}">${mfrLabel[d.mfr]}</div>
+        ${d.isFastestLap ? '<div class="fl-badge"><i class="ti ti-bolt"></i></div>' : ''}
+      </div>
+      <div class="driver-info">
+        <div class="driver-name">${d.name}</div>
+        <div class="driver-num">#${d.num} · ${String(d.team || '').toUpperCase()}</div>
+      </div>
+      <div class="driver-stats">
+        <div class="gap-time${i === 0 ? ' leader-gap' : ''}">${d.gap}</div>
+        ${d.lapsDown
+          ? `<div class="laps-down">${d.lapsDown}</div>`
+          : `<div class="pit-info${d.freshTires ? ' fresh' : ''}">${d.pitInfo || ''}</div>`}
+      </div>
+      <div class="pos-change ${d.posChange || 'same'}">${d.posChange === 'up' ? '▲' : d.posChange === 'down' ? '▼' : '–'}</div>
+    </div>
+    ${i === 4 ? '<div class="row-divider"></div>' : ''}
+  `).join('');
+}
+
+function renderSchedule(races) {
+  const typeLabel = { oval: 'Oval', road: 'Road Course', super: 'Superspeedway' };
+  document.getElementById('schedule-list').innerHTML = races.map(r => `
+    <div class="schedule-card${r.next ? ' next' : ''}">
+      <div class="sc-top">
+        <div>
+          ${r.next ? '<div class="sc-next-badge">Next Race</div>' : ''}
+          <div class="sc-track">${r.track}</div>
+          <div class="sc-event">${r.event}</div>
+        </div>
+        <div class="sc-date">${r.date}</div>
+      </div>
+      <div class="sc-type">
+        <span class="sc-badge ${r.type}">${typeLabel[r.type] || r.type}</span>
+        <span class="sc-badge dist">${r.dist}</span>
+      </div>
+      ${r.sessions ? `
+        <div class="sc-sessions">
+          ${r.sessions.map(s => `<div class="sc-session">${s.name} <span>${s.time}</span></div>`).join('')}
+        </div>` : ''}
+    </div>
+  `).join('');
+}
+
+function renderStandings(drivers) {
+  document.getElementById('standings-list').innerHTML = drivers.map((d, i) => `
+    <div class="standings-row">
+      <div class="s-pos${i < 3 ? ' top3' : ''}">${i + 1}</div>
+      <div class="driver-photo-wrap" style="flex-shrink:0;">
+        <div class="driver-photo ${d.mfr}" style="width:32px;height:32px;font-size:10px;">${d.initials}</div>
+        <div class="mfr-badge ${d.mfr}">${mfrLabel[d.mfr]}</div>
+      </div>
+      <div class="s-name">${d.name}${d.playoff ? '<span class="p-tag">P</span>' : ''}</div>
+      <div class="s-wins">${d.wins}</div>
+      <div class="s-pts">${d.pts}</div>
+      <div class="s-diff">${d.diff}</div>
+    </div>
+  `).join('');
+}
+
+// ── DRIVER DETAIL ─────────────────────────────────────────────────────────────
+function drawSparkline(positions) {
+  const w = 320, h = 56, pad = 5;
+  const min = Math.min(...positions), max = Math.max(...positions);
+  const range = max - min || 1;
+  const pts = positions.map((p, i) => [
+    pad + (i / (positions.length - 1)) * (w - pad * 2),
+    pad + ((p - min) / range) * (h - pad * 2),
+  ]);
+  const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+  const last = pts.at(-1);
+  document.getElementById('spark-line').setAttribute('d', line);
+  document.getElementById('spark-area').setAttribute('d',
+    `${line} L${last[0].toFixed(1)},${h} L${pts[0][0].toFixed(1)},${h} Z`);
+  document.getElementById('spark-dot').setAttribute('cx', last[0].toFixed(1));
+  document.getElementById('spark-dot').setAttribute('cy', last[1].toFixed(1));
+}
+
+function buildPitLog(pits) {
+  document.getElementById('pit-log').innerHTML = pits.map(p => `
+    <div class="pit-entry">
+      <div class="pit-stop-num">#${p.stop}</div>
+      <div><span class="pit-lap-num">${p.lap}</span><span class="pit-lap-lbl"> lap</span></div>
+      <span class="pit-tire">${p.tires}</span>
+      <div class="pit-dur">${p.dur}</div>
+    </div>
+  `).join('');
+}
+
+function showDriver(idx) {
+  const d = cupDrivers[idx];
+  const mfrColors = {
+    chevy:  { border: '#ff4444', shadow: 'rgba(255,68,68,0.25)' },
+    toyota: { border: '#ffd600', shadow: 'rgba(255,214,0,0.25)' },
+    ford:   { border: '#3b82f6', shadow: 'rgba(59,130,246,0.25)' },
+  };
+  const mfrName = { chevy: 'Chevrolet', toyota: 'Toyota', ford: 'Ford' };
+
+  const photo = document.getElementById('dd-photo');
+  photo.textContent = d.initials;
+  photo.style.borderColor = mfrColors[d.mfr].border;
+  photo.style.boxShadow = `0 0 16px ${mfrColors[d.mfr].shadow}`;
+
+  document.getElementById('dd-name').textContent = d.name;
+  document.getElementById('dd-meta').textContent = `#${d.num} · ${String(d.team || '').toUpperCase()} · ${mfrName[d.mfr]}`;
+  document.getElementById('dd-pos-badge').textContent = d.pos + (idx === 0 ? ' — LEADER' : '');
+  document.getElementById('dd-gap').textContent = d.gap;
+  document.getElementById('dd-laps-led').textContent = d.lapsLed;
+  document.getElementById('dd-speed').textContent = `${d.speed} mph`;
+  document.getElementById('dd-stage-pts').textContent = d.stagePts;
+  document.getElementById('dd-fast-lap').textContent = d.fastLap;
+  document.getElementById('dd-tire-age').textContent = d.tireAge;
+  document.getElementById('gt-self').textContent = d.name;
+  document.getElementById('gt-ahead').textContent = d.ahead || '— LEADER —';
+  document.getElementById('gt-ahead-gap').textContent = d.aheadGap;
+  document.getElementById('gt-behind').textContent = d.behind || '— LAST —';
+  document.getElementById('gt-behind-gap').textContent = d.behindGap;
+
+  drawSparkline(d.positions);
+  buildPitLog(d.pits);
+  setActiveScreen('driver');
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+function setActiveScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  ['live', 'schedule', 'standings'].forEach(n => {
+    document.getElementById('nav-' + n)?.classList.remove('active');
+    document.getElementById('snav-' + n)?.classList.remove('active');
+  });
+  if (name !== 'driver') {
+    document.getElementById('nav-' + name)?.classList.add('active');
+    document.getElementById('snav-' + name)?.classList.add('active');
+  }
+}
+
+function switchScreen(name) { setActiveScreen(name); }
+function goBack()            { setActiveScreen('live'); }
+
+function switchSeries(seriesId) {
+  currentSeries = seriesId;
+  const meta = SERIES[seriesId];
+  document.getElementById('live-series-lbl').textContent = `${meta.label} — Live`;
+  document.getElementById('schedule-lbl').textContent    = `${meta.label} — Upcoming`;
+  document.getElementById('standings-lbl').textContent   = `${meta.label} — ${meta.season}`;
+  // Wire series-specific data here when API is available
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+// Render fallback data immediately so UI is never empty
+renderLeaderboard(cupDrivers);
+renderSchedule(cupSchedule);
+renderStandings(cupStandings);
+
+// Start live data polling
+startPolling();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>
