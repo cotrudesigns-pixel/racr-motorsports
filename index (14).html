@@ -1,0 +1,1591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#111318">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Racr">
+  <meta name="description" content="Racr — Live race data, standings, and schedules for NASCAR, IndyCar, and F1.">
+  <title>Racr</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <style>
+    :root {
+      --bg:            #111318;
+      --bg2:           #181a1f;
+      --bg3:           #1e2026;
+      --accent:        #c8ff00;
+      --accent-dim:    rgba(200,255,0,0.07);
+      --accent-border: rgba(200,255,0,0.16);
+      --caution:       #ffbe00;
+      --chevy:         #ff4444;
+      --toyota:        #ffd600;
+      --ford:          #3b82f6;
+      --text:          #f0f0f2;
+      --text-dim:      #8888a0;
+      --text-mute:     #ffffff;
+      --border:        rgba(255,255,255,0.07);
+      --border-accent: rgba(200,255,0,0.13);
+      --mono:          'Share Tech Mono', monospace;
+      --sans:          'Rajdhani', sans-serif;
+      --purple:        #c864ff;
+      --radius:        10px;
+      --sidebar-w:     224px;
+      --safe-bottom:   env(safe-area-inset-bottom, 0px);
+      --safe-top:      env(safe-area-inset-top, 0px);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+    }
+
+    @media (min-width: 1024px) {
+      body {
+        background-image:
+          repeating-linear-gradient(0deg,  transparent, transparent 48px, rgba(200,255,0,0.011) 48px, rgba(200,255,0,0.011) 49px),
+          repeating-linear-gradient(90deg, transparent, transparent 48px, rgba(200,255,0,0.011) 48px, rgba(200,255,0,0.011) 49px);
+      }
+    }
+
+    /* ── SCAN LINE ── */
+    .scan-line {
+      position: fixed; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      animation: scan 6s linear infinite;
+      opacity: 0.08; pointer-events: none; z-index: 999;
+    }
+    @keyframes scan { 0% { top: 0; } 100% { top: 100vh; } }
+
+    /* ── APP SHELL ── */
+    .app-shell {
+      display: flex;
+      width: 100%;
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    /* ── SIDEBAR (desktop only) ── */
+    .sidebar { display: none; }
+
+    @media (min-width: 1024px) {
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        width: var(--sidebar-w);
+        flex-shrink: 0;
+        background: var(--bg2);
+        border-right: 1px solid var(--border-accent);
+        padding: 28px 0 24px;
+      }
+      .sidebar-brand {
+        padding: 0 20px 24px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 12px;
+      }
+      .sidebar-nav {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        padding: 0 10px;
+      }
+      .sidebar-item {
+        display: flex; align-items: center; gap: 12px;
+        padding: 11px 14px; border-radius: var(--radius);
+        cursor: pointer; border: 1px solid transparent;
+        background: transparent; color: var(--text-dim);
+        font-family: var(--sans); font-size: 14px; font-weight: 600;
+        letter-spacing: 1px; text-transform: uppercase;
+        transition: all 0.15s; width: 100%; text-align: left;
+      }
+      .sidebar-item i { font-size: 18px; }
+      .sidebar-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+      .sidebar-item.active {
+        background: var(--accent-dim); color: var(--accent);
+        border-color: var(--accent-border);
+      }
+      .sidebar-footer {
+        padding: 16px 20px 0;
+        border-top: 1px solid var(--border);
+        margin-top: auto;
+        font-size: 10px; letter-spacing: 1.5px;
+        color: var(--text-mute); text-transform: uppercase;
+      }
+    }
+
+    /* ── MAIN CONTENT ── */
+    .main-content {
+      flex: 1; display: flex; flex-direction: column;
+      overflow: hidden; min-width: 0;
+    }
+
+    /* ── HEADER ── */
+    .app-header {
+      flex-shrink: 0;
+      padding: calc(14px + var(--safe-top)) 20px 14px;
+      border-bottom: 1px solid var(--border-accent);
+      background: var(--bg2);
+    }
+    .header-top {
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 12px; margin-bottom: 10px;
+    }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    @media (min-width: 1024px) { .header-brand { display: none; } }
+
+    /* ── BRAND ── */
+    .brand-mark { display: flex; align-items: center; gap: 10px; }
+    .brand-checker {
+      display: grid;
+      grid-template-columns: repeat(4, 6px);
+      grid-template-rows: repeat(3, 6px);
+      gap: 1.5px;
+    }
+    .bc { border-radius: 1px; }
+    .bc.g { background: #2d5a1b; }
+    .bc.w { background: var(--accent); }
+    .brand-name { font-size: 20px; font-weight: 700; letter-spacing: 5px; line-height: 1; }
+    .brand-sub  { font-size: 8px; letter-spacing: 4px; color: var(--accent); font-weight: 600; margin-top: 2px; }
+
+    /* ── SERIES SELECTOR ── */
+    .series-wrap { position: relative; display: flex; align-items: center; }
+    .series-select {
+      appearance: none; -webkit-appearance: none;
+      background: var(--bg3); border: 1px solid var(--accent-border);
+      color: var(--text); font-family: var(--sans);
+      font-size: 12px; font-weight: 600; letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 7px 30px 7px 12px;
+      border-radius: 8px; cursor: pointer; outline: none;
+      transition: border-color 0.15s;
+    }
+    .series-select:focus { border-color: rgba(200,255,0,0.4); }
+    .series-chevron {
+      position: absolute; right: 9px;
+      pointer-events: none; color: var(--accent); font-size: 13px;
+    }
+
+    /* ── STATUS BADGE ── */
+    .status-badge {
+      display: flex; align-items: center; gap: 5px;
+      padding: 5px 12px; border-radius: 20px;
+      background: var(--accent-dim); border: 1px solid var(--accent-border);
+    }
+    .status-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent); animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+    .status-txt { font-size: 10px; letter-spacing: 2px; color: var(--accent); font-weight: 700; }
+
+    /* ── RACE INFO ROW ── */
+    .race-info-row { display: flex; align-items: center; gap: 10px; }
+    .race-title { font-size: 14px; font-weight: 700; letter-spacing: 0.3px; flex: 1; }
+    .lap-badge {
+      font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+      padding: 4px 10px; border-radius: 6px; white-space: nowrap;
+    }
+    .lap-badge span { color: var(--text); }
+
+    /* ── STAGE BAR ── */
+    .stage-bar {
+      flex-shrink: 0; display: flex; align-items: center; gap: 10px;
+      padding: 8px 20px; border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    .stage-lbl { font-size: 9px; letter-spacing: 2px; color: var(--text-mute); text-transform: uppercase; white-space: nowrap; }
+    .stage-track { flex: 1; height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+    .stage-fill  { height: 100%; width: 0%; background: var(--accent); border-radius: 2px; transition: width 0.4s, background 0.3s; }
+    .stage-pts   { font-family: var(--mono); font-size: 10px; color: var(--text-dim); white-space: nowrap; }
+
+    /* ── SECTION LABEL ── */
+    .section-lbl {
+      flex-shrink: 0;
+      font-size: 9px; letter-spacing: 3px; color: var(--text-mute);
+      text-transform: uppercase; padding: 12px 20px 6px;
+    }
+
+    /* ── SCREENS ── */
+    .screen { display: none; flex-direction: column; flex: 1; overflow: hidden; min-height: 0; }
+    .screen.active { display: flex; }
+
+    /* ── SCROLL CONTAINER ── */
+    .scroll-content {
+      flex: 1; min-height: 0;
+      overflow-y: auto; overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: contain;
+      padding-bottom: calc(16px + var(--safe-bottom));
+      scrollbar-width: none;
+    }
+    .scroll-content::-webkit-scrollbar { display: none; }
+
+    /* ── LEADERBOARD ── */
+    .leaderboard { padding: 8px 12px 0; }
+
+    .driver-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px; border-radius: var(--radius); margin-bottom: 3px;
+      cursor: pointer; transition: background 0.12s;
+      border: 1px solid transparent;
+    }
+    .driver-row:hover  { background: rgba(255,255,255,0.03); border-color: var(--border); }
+    .driver-row:active { background: rgba(255,255,255,0.05); }
+    .driver-row.leader { background: rgba(200,255,0,0.04); border-color: var(--accent-border); }
+
+    .pos-num { font-family: var(--mono); font-size: 13px; color: var(--text-mute); width: 18px; text-align: center; flex-shrink: 0; }
+    .pos-num.top3 { color: var(--accent); }
+
+    .driver-photo-wrap { position: relative; flex-shrink: 0; }
+    .driver-photo {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--bg3); display: flex; align-items: center;
+      justify-content: center; font-size: 12px; font-weight: 700;
+      font-family: var(--mono); letter-spacing: -0.5px;
+      border: 2px solid transparent;
+    }
+    .driver-photo.chevy  { border-color: var(--chevy);  box-shadow: 0 0 10px rgba(255,68,68,0.2); }
+    .driver-photo.toyota { border-color: var(--toyota); box-shadow: 0 0 10px rgba(255,214,0,0.2); }
+    .driver-photo.ford   { border-color: var(--ford);   box-shadow: 0 0 10px rgba(59,130,246,0.2); }
+    .last-lap-time { font-family: var(--mono); font-size: 10px; color: #666; letter-spacing: 0.5px; margin-top: 2px; }
+
+    .mfr-badge {
+      position: absolute; bottom: -1px; right: -1px;
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 1.5px solid var(--bg2); font-size: 6px;
+      display: flex; align-items: center; justify-content: center; font-weight: 700;
+    }
+    .mfr-badge.chevy  { background: var(--chevy);  color: #fff; }
+    .mfr-badge.toyota { background: var(--toyota); color: #000; }
+    .mfr-badge.ford   { background: var(--ford);   color: #fff; }
+
+    .fl-badge {
+      position: absolute; top: 2px; right: 2px;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: rgba(200,100,255,0.1); border: 1px solid rgba(200,100,255,0.3);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .fl-badge i { font-size: 7px; color: var(--purple); }
+
+    .driver-info { flex: 1; min-width: 0; }
+    .driver-name {
+      font-size: 15px; font-weight: 700; letter-spacing: 0.3px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2;
+    }
+    .driver-num { font-size: 10px; color: var(--text-mute); font-family: var(--mono); letter-spacing: 1px; margin-top: 2px; }
+
+    .driver-stats { text-align: right; flex-shrink: 0; }
+    .gap-time { font-family: var(--mono); font-size: 13px; color: var(--text-dim); line-height: 1.2; }
+    .gap-time.leader-gap { color: var(--accent); font-size: 10px; letter-spacing: 1.5px; font-weight: 700; }
+    .gap-time.off-track { color: #ff3b3b; font-size: 10px; letter-spacing: 2px; font-weight: 700; }
+    .pit-info   { font-size: 9px; color: var(--text-mute); letter-spacing: 0.5px; margin-top: 3px; }
+    .pit-info.fresh { color: var(--accent); opacity: 0.85; }
+    .lap-time-col { font-family: var(--mono); font-size: 12px; color: #888; text-align: right; flex-shrink: 0; width: 58px; }
+    .lap-time-col.fastest { color: var(--purple); }
+    .leaderboard-header { display: flex; align-items: center; gap: 9px; padding: 4px 16px 4px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 2px; }
+    .lh-spacer { flex-shrink: 0; }
+    .lh-name { flex: 1; font-size: 9px; letter-spacing: 2px; color: #333; text-transform: uppercase; }
+    .lh-gap { font-size: 9px; letter-spacing: 2px; color: #333; text-transform: uppercase; text-align: right; flex-shrink: 0; width: 58px; }
+    .lh-lap { font-size: 9px; letter-spacing: 2px; color: #333; text-transform: uppercase; text-align: right; flex-shrink: 0; width: 58px; }
+    .lh-arr { width: 12px; flex-shrink: 0; }
+    .laps-down  { font-size: 9px; color: var(--chevy); letter-spacing: 0.5px; margin-top: 3px; }
+
+    .pos-change { width: 12px; font-size: 9px; text-align: center; flex-shrink: 0; }
+    .pos-change.up   { color: var(--accent); }
+    .pos-change.down { color: var(--chevy); }
+    .pos-change.same { color: transparent; }
+
+    .row-divider { height: 1px; background: var(--border); margin: 6px 10px; }
+
+    /* ── DRIVER DETAIL ── */
+    .driver-detail { padding: 16px 20px; }
+
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 10px; letter-spacing: 2px; color: var(--accent);
+      text-transform: uppercase; cursor: pointer; margin-bottom: 20px;
+      background: none; border: none; padding: 0;
+      font-family: var(--sans); font-weight: 700;
+    }
+
+    .dd-header { display: flex; gap: 16px; align-items: center; margin-bottom: 20px; }
+    .dd-photo {
+      width: 60px; height: 60px; border-radius: 50%; background: var(--bg3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; font-weight: 700; border: 2px solid var(--accent);
+      box-shadow: 0 0 18px rgba(200,255,0,0.18); flex-shrink: 0;
+    }
+    .dd-name { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+    .dd-meta { font-size: 11px; color: var(--text-dim); letter-spacing: 1.5px; margin-top: 4px; }
+    .dd-pos-badge {
+      display: inline-flex; align-items: center; margin-top: 8px;
+      padding: 3px 10px; border-radius: 20px;
+      background: var(--accent-dim); border: 1px solid var(--accent-border);
+    }
+    .dd-pos-badge span { font-size: 10px; color: var(--accent); letter-spacing: 1px; font-weight: 700; }
+
+    .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+    @media (min-width: 600px) { .stat-grid { grid-template-columns: repeat(3, 1fr); } }
+
+    .stat-box {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px 14px;
+    }
+    .stat-lbl { font-size: 9px; color: var(--text-mute); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; }
+    .stat-val  { font-family: var(--mono); font-size: 20px; color: var(--accent); line-height: 1.1; }
+    .stat-val.white  { color: var(--text); }
+    .stat-val.purple { color: var(--purple); }
+
+    .data-box {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px; margin-bottom: 10px;
+    }
+    .box-title { font-size: 9px; color: var(--text-mute); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+
+    .gap-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
+    .gap-arrow { font-size: 10px; color: var(--text-mute); }
+    .gap-driver-name { font-size: 13px; font-weight: 700; flex: 1; }
+    .gap-val-ahead  { font-family: var(--mono); font-size: 13px; color: var(--chevy); }
+    .gap-val-behind { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+    .gap-self-row {
+      font-size: 13px; color: var(--accent); font-weight: 700;
+      padding: 5px 0; margin: 2px 0; flex: 1;
+      border-top: 1px solid rgba(200,255,0,0.1);
+      border-bottom: 1px solid rgba(200,255,0,0.1);
+    }
+
+    .pit-entry {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 0; border-bottom: 1px solid var(--border);
+    }
+    .pit-entry:last-child { border-bottom: none; }
+    .pit-stop-num { font-family: var(--mono); font-size: 10px; color: var(--text-mute); width: 20px; }
+    .pit-lap-num  { font-family: var(--mono); font-size: 13px; }
+    .pit-lap-lbl  { font-size: 10px; color: var(--text-mute); margin-left: 2px; }
+    .pit-dur { font-family: var(--mono); font-size: 13px; color: var(--accent); margin-left: auto; }
+    .pit-tire {
+      font-size: 9px; letter-spacing: 1px; color: var(--text-mute);
+      padding: 2px 7px; border-radius: 10px; border: 1px solid var(--border);
+    }
+
+    /* ── SCREEN HEADER (schedule / standings) ── */
+    .screen-header {
+      flex-shrink: 0;
+      padding: calc(14px + var(--safe-top)) 20px 14px;
+      border-bottom: 1px solid var(--border-accent);
+      background: var(--bg2);
+    }
+    .screen-header-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .screen-header-title { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+    @media (min-width: 1024px) { .screen-header-brand { display: none; } }
+
+    /* ── SCHEDULE ── */
+    .schedule-list { padding: 8px 14px 0; }
+
+    .schedule-card {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px;
+      transition: border-color 0.15s;
+    }
+    .schedule-card:hover { border-color: rgba(255,255,255,0.12); }
+    .schedule-card.next  { border-color: rgba(200,255,0,0.22); background: rgba(200,255,0,0.02); }
+
+    .sc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .sc-next-badge { font-size: 9px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+    .sc-bracket-badge { font-size: 9px; letter-spacing: 2px; color: #ff9f00; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; }
+    .sc-bracket-badge::before { content: ''; display: inline-block; width: 8px; height: 8px; border: 1.5px solid #ff9f00; transform: rotate(45deg); flex-shrink: 0; }
+    .schedule-card.bracket { border-color: rgba(255,159,0,0.3); background: rgba(255,159,0,0.04); }
+    .schedule-card.bracket.next { border-color: rgba(255,159,0,0.5); background: rgba(255,159,0,0.07); }
+    .sc-badge.bracket-champ { background: rgba(255,159,0,0.12); color: #ff9f00; border-color: rgba(255,159,0,0.3); font-weight: 700; }
+    .sc-track { font-size: 16px; font-weight: 700; letter-spacing: 0.3px; }
+    .sc-event { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+    .sc-date  { font-family: var(--mono); font-size: 12px; color: var(--text-mute); white-space: nowrap; }
+
+    .sc-type { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+    .sc-time { font-size: 10px; color: #888; letter-spacing: 1px; margin-top: 6px; font-family: var(--mono); }
+    .sc-badge {
+      font-size: 9px; letter-spacing: 1px; padding: 3px 9px;
+      border-radius: 20px; text-transform: uppercase; font-weight: 700; border: 1px solid;
+    }
+    .sc-badge.oval  { background: rgba(59,130,246,0.08);  color: var(--ford);      border-color: rgba(59,130,246,0.2); }
+    .sc-badge.road  { background: var(--accent-dim);       color: var(--accent);    border-color: var(--accent-border); }
+    .sc-badge.super { background: rgba(255,68,68,0.07);   color: var(--chevy);     border-color: rgba(255,68,68,0.2); }
+    .sc-badge.dist  { background: rgba(255,255,255,0.03); color: var(--text-mute); border-color: var(--border); }
+
+    .sc-sessions {
+      margin-top: 12px; border-top: 1px solid var(--border);
+      padding-top: 10px; display: flex; gap: 16px; flex-wrap: wrap;
+    }
+    .sc-session { font-size: 11px; color: var(--text-mute); }
+    .sc-session span { color: var(--text-dim); }
+
+    /* ── STANDINGS ── */
+    .s-header-row {
+      flex-shrink: 0; display: flex; align-items: center; gap: 10px;
+      padding: 6px 20px; border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    .s-header-lbl { font-size: 9px; letter-spacing: 2px; color: var(--text-mute); text-transform: uppercase; }
+
+    .standings-list { padding: 4px 0; }
+    .standings-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 20px; border-bottom: 1px solid var(--border);
+      cursor: pointer; transition: background 0.1s;
+    }
+    .standings-row:hover, .standings-row:active { background: rgba(255,255,255,0.025); }
+
+    .s-pos { font-family: var(--mono); font-size: 13px; color: var(--text-mute); width: 22px; flex-shrink: 0; }
+    .s-pos.top3 { color: var(--accent); }
+    .s-name { flex: 1; font-size: 14px; font-weight: 700; }
+    .s-pts  { font-family: var(--mono); font-size: 13px; color: var(--accent); min-width: 40px; text-align: right; }
+    .s-diff { font-family: var(--mono); font-size: 11px; color: var(--text-mute); width: 48px; text-align: right; }
+    .s-wins { font-family: var(--mono); font-size: 11px; color: var(--text-dim); width: 24px; text-align: center; }
+    .p-tag {
+      font-size: 8px; letter-spacing: 1px; padding: 1px 5px; border-radius: 6px;
+      background: var(--accent-dim); color: var(--accent); margin-left: 6px;
+      border: 1px solid var(--accent-border); vertical-align: middle;
+    }
+
+    /* ── PILL NAV (mobile only) ── */
+    .pill-nav {
+      flex-shrink: 0; display: flex; justify-content: center;
+      padding: 10px 18px calc(12px + var(--safe-bottom));
+      background: linear-gradient(to top, var(--bg) 60%, transparent);
+    }
+    @media (min-width: 1024px) { .pill-nav { display: none; } }
+
+    .pill {
+      display: flex; align-items: center;
+      background: rgba(14,14,28,0.98); border: 1px solid var(--border-accent);
+      border-radius: 50px; padding: 5px 6px; gap: 2px;
+      box-shadow: 0 4px 30px rgba(0,0,0,0.6);
+    }
+    .nav-item {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 7px 18px; border-radius: 40px; cursor: pointer;
+      transition: background 0.15s; border: none; background: transparent;
+    }
+    .nav-item.active { background: var(--accent-dim); }
+    .nav-item i { font-size: 18px; color: var(--text-mute); }
+    .nav-item.active i { color: var(--accent); }
+    .nav-item span { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-mute); font-family: var(--sans); font-weight: 600; }
+    .nav-item.active span { color: var(--accent); }
+
+    /* ── DESKTOP LEADERBOARD SCALING ── */
+    @media (min-width: 1024px) {
+      .leaderboard { padding: 12px 24px 0; }
+      .driver-row { padding: 16px 20px; margin-bottom: 5px; }
+      .driver-photo { width: 54px; height: 54px; font-size: 15px; }
+      .driver-name { font-size: 19px; }
+      .driver-num { font-size: 12px; }
+      .gap-time { font-size: 17px; }
+      .gap-time.leader-gap { font-size: 12px; }
+      .pos-num { font-size: 17px; width: 26px; }
+      .pit-info, .laps-down { font-size: 11px; }
+      .pos-change { width: 16px; font-size: 11px; }
+    }
+
+    /* ── PAST RACE CARD ── */
+    .schedule-card.past { opacity: 0.48; }
+    .schedule-card.past:hover { opacity: 0.8; border-color: rgba(255,255,255,0.1); }
+    .sc-completed-badge { font-size: 9px; letter-spacing: 2px; color: var(--text-mute); text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+    .sc-result { font-size: 11px; color: var(--text-mute); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+    .sc-result span { color: var(--text-dim); font-family: var(--mono); }
+
+    /* ── PLAYOFF CUTLINE ── */
+    .cutline-row { display: flex; align-items: center; gap: 10px; padding: 6px 20px; }
+    .cutline-label { font-size: 8px; letter-spacing: 2px; color: var(--chevy); text-transform: uppercase; white-space: nowrap; font-weight: 700; }
+    .cutline-line { flex: 1; height: 1px; background: rgba(255,68,68,0.35); }
+
+    /* ── PLAYOFF PTS COLUMN ── */
+    .s-ppts { font-family: var(--mono); font-size: 11px; color: var(--purple); width: 36px; text-align: right; }
+  </style>
+</head>
+<body>
+<div class="scan-line"></div>
+<div class="app-shell">
+
+  <!-- ── SIDEBAR (desktop) ── -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-mark">
+        <div class="brand-checker">
+          <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+          <div class="bc w"></div><div class="bc g"></div><div class="bc w"></div><div class="bc g"></div>
+          <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+        </div>
+        <div>
+          <div class="brand-name">RACR</div>
+          <div class="brand-sub">MOTORSPORTS</div>
+        </div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="sidebar-item active" id="snav-live" onclick="switchScreen('live')">
+        <i class="ti ti-radio"></i> Live
+      </button>
+      <button class="sidebar-item" id="snav-schedule" onclick="switchScreen('schedule')">
+        <i class="ti ti-calendar-event"></i> Schedule
+      </button>
+      <button class="sidebar-item" id="snav-standings" onclick="switchScreen('standings')">
+        <i class="ti ti-trophy"></i> Standings
+      </button>
+    </nav>
+    <div class="sidebar-footer">Live data · NASCAR.com</div>
+  </aside>
+
+  <!-- ── MAIN CONTENT ── -->
+  <div class="main-content">
+
+    <!-- ══ LIVE SCREEN ══ -->
+    <div id="screen-live" class="screen active">
+      <div class="app-header">
+        <div class="header-top">
+          <div class="header-brand brand-mark">
+            <div class="brand-checker">
+              <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+              <div class="bc w"></div><div class="bc g"></div><div class="bc w"></div><div class="bc g"></div>
+              <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+            </div>
+            <div>
+              <div class="brand-name">RACR</div>
+              <div class="brand-sub">MOTORSPORTS</div>
+            </div>
+          </div>
+          <div class="header-right">
+            <div class="series-wrap">
+              <select class="series-select" id="series-select" onchange="switchSeries(this.value)">
+                <option value="nascar-cup">NASCAR Cup</option>
+                <option value="nascar-xfinity">O'Reilly</option>
+                <option value="nascar-trucks">Trucks</option>
+                <option value="indycar">IndyCar</option>
+                <option value="f1">Formula 1</option>
+              </select>
+              <i class="ti ti-chevron-down series-chevron"></i>
+            </div>
+            <div class="status-badge">
+              <div class="status-dot"></div>
+              <div class="status-txt">GREEN</div>
+            </div>
+          </div>
+        </div>
+        <div class="race-info-row">
+          <div class="race-title" id="race-title">No race currently in progress</div>
+          <div class="lap-badge">LAP <span id="lap-current">—</span>/<span id="lap-total">—</span></div>
+        </div>
+      </div>
+      <div class="stage-bar">
+        <div class="stage-lbl" id="stage-lbl">Stage —</div>
+        <div class="stage-track"><div class="stage-fill" id="stage-fill"></div></div>
+        <div class="stage-pts" id="stage-pts">— / — LAPS</div>
+      </div>
+      <div class="section-lbl" id="live-series-lbl">NASCAR Cup Series — Live</div>
+      <div class="scroll-content">
+        <div class="leaderboard" id="leaderboard"></div>
+      </div>
+    </div>
+
+    <!-- ══ DRIVER DETAIL SCREEN ══ -->
+    <div id="screen-driver" class="screen">
+      <div class="app-header">
+        <div class="header-top">
+          <button class="back-btn" onclick="goBack()">
+            <i class="ti ti-arrow-left"></i> Leaderboard
+          </button>
+        </div>
+      </div>
+      <div class="scroll-content">
+        <div class="driver-detail">
+          <div class="dd-header">
+            <div class="dd-photo" id="dd-photo">--</div>
+            <div>
+              <div class="dd-name" id="dd-name">—</div>
+              <div class="dd-meta" id="dd-meta">—</div>
+              <div class="dd-pos-badge"><span id="dd-pos-badge">—</span></div>
+            </div>
+          </div>
+          <div class="stat-grid">
+            <div class="stat-box"><div class="stat-lbl">Gap to Leader</div><div class="stat-val white" id="dd-gap">—</div></div>
+            <div class="stat-box"><div class="stat-lbl">Laps Led</div><div class="stat-val" id="dd-laps-led">—</div></div>
+            <div class="stat-box"><div class="stat-lbl">Avg Speed</div><div class="stat-val white" id="dd-speed">—</div></div>
+            <div class="stat-box"><div class="stat-lbl">Stage Pts</div><div class="stat-val" id="dd-stage-pts">—</div></div>
+            <div class="stat-box"><div class="stat-lbl">Fastest Lap</div><div class="stat-val purple" id="dd-fast-lap">—</div></div>
+            <div class="stat-box"><div class="stat-lbl">Tire Age</div><div class="stat-val white" id="dd-tire-age">—</div></div>
+          </div>
+          <div class="data-box">
+            <div class="box-title">Position History — Last 50 Laps</div>
+            <svg width="100%" height="56" viewBox="0 0 320 56" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#c8ff00" stop-opacity="0.2"/>
+                  <stop offset="100%" stop-color="#c8ff00" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path id="spark-area" fill="url(#sg)"/>
+              <path id="spark-line" fill="none" stroke="#c8ff00" stroke-width="1.8" stroke-linejoin="round"/>
+              <circle id="spark-dot" r="3" fill="#c8ff00"/>
+            </svg>
+            <div style="display:flex;justify-content:space-between;margin-top:5px;">
+              <span style="font-size:9px;color:var(--text-mute);letter-spacing:1px;" id="spark-lbl-start">LAP —</span>
+              <span style="font-size:9px;color:var(--text-mute);letter-spacing:1px;" id="spark-lbl-end">LAP —</span>
+            </div>
+          </div>
+          <div class="data-box">
+            <div class="box-title">Gap Tracker</div>
+            <div class="gap-row">
+              <div class="gap-arrow">▲</div>
+              <div class="gap-driver-name" id="gt-ahead" style="color:var(--text-mute);font-size:12px;">— LEADER —</div>
+              <div class="gap-val-ahead" id="gt-ahead-gap"></div>
+            </div>
+            <div class="gap-row" style="padding:3px 0;">
+              <div style="width:14px;"></div>
+              <div class="gap-self-row" id="gt-self">—</div>
+            </div>
+            <div class="gap-row">
+              <div class="gap-arrow">▼</div>
+              <div class="gap-driver-name" id="gt-behind">—</div>
+              <div class="gap-val-behind" id="gt-behind-gap"></div>
+            </div>
+          </div>
+          <div class="data-box">
+            <div class="box-title">Pit Stop Log</div>
+            <div id="pit-log"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SCHEDULE SCREEN ══ -->
+    <div id="screen-schedule" class="screen">
+      <div class="screen-header">
+        <div class="screen-header-brand">
+          <div class="brand-checker">
+            <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+            <div class="bc w"></div><div class="bc g"></div><div class="bc w"></div><div class="bc g"></div>
+            <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+          </div>
+          <div><div class="brand-name">RACR</div><div class="brand-sub">MOTORSPORTS</div></div>
+        </div>
+        <div class="screen-header-title">Schedule</div>
+      </div>
+      <div class="section-lbl" id="schedule-lbl">Upcoming Races</div>
+      <div class="scroll-content">
+        <div class="schedule-list" id="schedule-list"></div>
+      </div>
+    </div>
+
+    <!-- ══ STANDINGS SCREEN ══ -->
+    <div id="screen-standings" class="screen">
+      <div class="screen-header">
+        <div class="screen-header-brand">
+          <div class="brand-checker">
+            <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+            <div class="bc w"></div><div class="bc g"></div><div class="bc w"></div><div class="bc g"></div>
+            <div class="bc g"></div><div class="bc w"></div><div class="bc g"></div><div class="bc w"></div>
+          </div>
+          <div><div class="brand-name">RACR</div><div class="brand-sub">MOTORSPORTS</div></div>
+        </div>
+        <div class="screen-header-title">Standings</div>
+      </div>
+      <div class="section-lbl" id="standings-lbl">NASCAR Cup Series — 2026 Season</div>
+      <div class="s-header-row">
+        <div style="width:22px;"></div>
+        <div style="width:40px;flex-shrink:0;"></div>
+        <div class="s-header-lbl" style="flex:1;">Driver</div>
+        <div class="s-header-lbl" style="width:24px;text-align:center;">W</div>
+        <div class="s-header-lbl" style="width:36px;text-align:right;">PPTS</div>
+        <div class="s-header-lbl" style="min-width:40px;text-align:right;">PTS</div>
+        <div class="s-header-lbl" style="width:48px;text-align:right;">DIFF</div>
+      </div>
+      <div class="scroll-content">
+        <div class="standings-list" id="standings-list"></div>
+      </div>
+    </div>
+
+    <!-- ── PILL NAV (mobile) ── -->
+    <div class="pill-nav">
+      <div class="pill">
+        <button class="nav-item active" id="nav-live" onclick="switchScreen('live')">
+          <i class="ti ti-radio"></i><span>Live</span>
+        </button>
+        <button class="nav-item" id="nav-schedule" onclick="switchScreen('schedule')">
+          <i class="ti ti-calendar-event"></i><span>Schedule</span>
+        </button>
+        <button class="nav-item" id="nav-standings" onclick="switchScreen('standings')">
+          <i class="ti ti-trophy"></i><span>Standings</span>
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /.main-content -->
+</div><!-- /.app-shell -->
+
+<script>
+// ── SERIES METADATA ──────────────────────────────────────────────────────────
+const SERIES = {
+  'nascar-cup':     { label: 'NASCAR Cup Series',              season: '2026 Season' },
+  'nascar-xfinity': { label: 'O\'Reilly Auto Parts Xfinity',  season: '2026 Season' },
+  'nascar-trucks':  { label: 'NASCAR Craftsman Trucks',        season: '2026 Season' },
+  'indycar':        { label: 'NTT IndyCar Series',             season: '2026 Season' },
+  'f1':             { label: 'Formula 1',                      season: '2026 Season' },
+};
+
+let currentSeries = 'nascar-cup';
+
+// ── LIVE NASCAR DATA INTEGRATION ─────────────────────────────────────────────
+// Cloudflare Worker proxy URL — update this after deploying worker.js
+const PROXY = 'https://racr-nascar-proxy.cotrudesigns.workers.dev';
+
+const NASCAR_SERIES_NUM = { 'nascar-cup': 1, 'nascar-xfinity': 2, 'nascar-trucks': 3 };
+const PLAYOFF_CUTOFF   = { 'nascar-cup': 16, 'nascar-xfinity': 12, 'nascar-trucks': 8 };
+const SEASON_YEAR = new Date().getFullYear();
+
+function getFeeds(seriesId) {
+  const num = NASCAR_SERIES_NUM[seriesId] || 1;
+  return {
+    live:      `${PROXY}?feed=https://cf.nascar.com/live/feeds/live-feed.json`,
+    schedule:  `${PROXY}?feed=https://cf.nascar.com/cacher/${SEASON_YEAR}/${num}/schedule/schedule.json`,
+    standings: `${PROXY}?feed=https://cf.nascar.com/cacher/${SEASON_YEAR}/${num}/driver_standings/driver_standings.json`,
+  };
+}
+
+// Flag state mapping
+const FLAG_STATES = {
+  1: { label: 'GREEN',     cls: 'green'  },
+  2: { label: 'YELLOW',    cls: 'yellow' },
+  3: { label: 'RED',       cls: 'red'    },
+  4: { label: 'CHECKERED', cls: 'green'  },
+  8: { label: 'WARM UP',   cls: 'yellow' },
+  9: { label: 'CHECKERED', cls: 'green'  },
+};
+
+function getMfr(mfrStr) {
+  if (!mfrStr) return 'chevy';
+  const m = mfrStr.toLowerCase();
+  if (m.includes('tyt') || m.includes('toy')) return 'toyota';
+  if (m.includes('frd') || m.includes('ford')) return 'ford';
+  if (m.includes('chv') || m.includes('chev')) return 'chevy';
+  return 'chevy';
+}
+
+function getInitials(name) {
+  if (!name) return '??';
+  const parts = name.trim().split(' ');
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
+  return name.slice(0,2).toUpperCase();
+}
+
+function formatGap(delta, position) {
+  if (position === 1) return 'LEADER';
+  if (!delta && delta !== 0) return '—';
+  if (typeof delta === 'string' && delta.includes('L')) return delta; // laps down
+  const val = parseFloat(delta);
+  if (isNaN(val)) return delta;
+  if (val === 0) return 'LEADER';
+  return val > 0 ? `+${val.toFixed(3)}` : val.toFixed(3);
+}
+
+let liveData = null;
+let prevPositions = {};
+let isRaceLive = false;
+const positionHistory = {}; // tracks running_position per car across polls
+
+function processLiveFeed(data) {
+  const vehicles = data.vehicles || [];
+  const flagState = FLAG_STATES[data.flag_state] || { label: 'GREEN', cls: 'green' };
+  const lapNum = data.lap_number || 0;
+  const lapsInRace = data.laps_in_race || 0;
+  const trackName = data.track_name || '';
+  const runName = data.run_name || '';
+  const stageNum = data.stage?.stage_num || 1;
+  const stageLaps = data.stage?.finish_at_lap || lapsInRace;
+
+  // Update race header
+  if (trackName && runName) {
+    const raceTitle = document.getElementById('race-title');
+    const lapCurrent = document.getElementById('lap-current');
+    const lapTotal = document.getElementById('lap-total');
+    if (raceTitle) raceTitle.textContent = `${runName} · ${trackName}`;
+    if (lapCurrent) lapCurrent.textContent = lapNum;
+    if (lapTotal) lapTotal.textContent = lapsInRace;
+  }
+
+  // Update flag status
+  const dot      = document.getElementById('status-dot');
+  const txt      = document.getElementById('status-txt');
+  const badge    = document.getElementById('status-badge');
+  const stageFill = document.getElementById('stage-fill');
+
+  if (dot && txt && badge) {
+    dot.className = 'status-dot' + (flagState.cls === 'yellow' ? ' yellow' : '');
+    txt.textContent = flagState.label;
+    txt.className = 'status-txt' + (flagState.cls === 'yellow' ? ' yellow' : '');
+    badge.className = 'status-badge' + (flagState.cls === 'yellow' ? ' caution-mode' : '');
+  }
+
+  if (stageFill) {
+    stageFill.className = 'stage-fill' + (flagState.cls === 'yellow' ? ' yellow' : '');
+    const pct = stageLaps > 0 ? Math.min((lapNum / stageLaps) * 100, 100) : 62;
+    stageFill.style.width = pct + '%';
+  }
+
+  const stageLblEl = document.getElementById('stage-lbl');
+  const stagePtsEl = document.getElementById('stage-pts');
+  if (stageLblEl) stageLblEl.textContent = `Stage ${stageNum}`;
+  if (stagePtsEl) stagePtsEl.textContent = `${lapNum} / ${lapsInRace} LAPS`;
+
+  // No vehicles = race not live
+  if (!vehicles.length) {
+    isRaceLive = false;
+    return;
+  }
+
+  isRaceLive = true;
+
+  // Sort by running position
+  const sorted = [...vehicles].sort((a, b) => (a.running_position || 99) - (b.running_position || 99));
+
+  // Fastest lap — use best_lap_speed
+  const fastestLap = sorted.reduce((best, v) => {
+    const spd = parseFloat(v.best_lap_speed) || parseFloat(v.last_lap_speed) || 0;
+    return spd > best.spd ? { spd, id: v.vehicle_number } : best;
+  }, { spd: 0, id: null });
+
+  const drivers = sorted.map((v, i) => {
+    const pos = v.running_position || (i + 1);
+    const prevPos = prevPositions[v.vehicle_number] || pos;
+    const posChange = pos < prevPos ? 'up' : pos > prevPos ? 'down' : 'same';
+    prevPositions[v.vehicle_number] = pos;
+
+    // 1. MANUFACTURER — live feed uses abbreviations: Chv, Tyt, Frd
+    const mfr = getMfr(v.vehicle_manufacturer || v.manufacturer || '');
+
+    // 2. DRIVER NAME — live feed nests under driver object
+    const driverObj = v.driver || {};
+    const firstName = driverObj.first_name || v.first_name || '';
+    const lastName  = driverObj.last_name  || v.last_name  || '';
+    const name = `${firstName} ${lastName}`.trim() || driverObj.full_name || `#${v.vehicle_number}`;
+
+    // 3. OFF/WRECKED — status 0 = out, or 0 speed after lap 5
+    const isOut = v.status === 0 ||
+                  (v.laps_completed === 0 && lapNum > 5 && (v.last_lap_speed || 0) === 0);
+    const lapsDown = v.laps_down > 0 ? `${v.laps_down} LAP${v.laps_down > 1 ? 'S' : ''} DOWN` : null;
+
+    // 4. LAPS LED — sum the laps_led array of {start_lap, end_lap} segments
+    let lapsLedCount = 0;
+    if (Array.isArray(v.laps_led)) {
+      v.laps_led.forEach(seg => {
+        if (seg && typeof seg.start_lap === 'number' && typeof seg.end_lap === 'number') {
+          lapsLedCount += (seg.end_lap - seg.start_lap) + 1;
+        }
+      });
+    } else if (typeof v.laps_led === 'number') {
+      lapsLedCount = v.laps_led;
+    }
+
+    // 5. STAGE POINTS — not directly in free feed, estimate from current position
+    const stagePtsTable = [10,9,8,7,6,5,4,3,2,1];
+    const stagePts = v.stage_points != null
+      ? v.stage_points
+      : (stagePtsTable[pos - 1] || 0);
+
+    // 6. PIT STOPS — filter phantom stops, calculate duration
+    const pitStopArr = Array.isArray(v.pit_stops) ? v.pit_stops : [];
+    const realPits = pitStopArr.filter(p =>
+      p.pit_out_elapsed_time > 0 && p.pit_in_elapsed_time > 0
+    );
+    const pitCount = realPits.length;
+    const lastPitStop = realPits[realPits.length - 1] || null;
+    const lastPitLap = lastPitStop?.pit_in_lap_count || 0;
+    const lapsSincePit = lastPitLap > 0 ? lapNum - lastPitLap : null;
+    const pitsFormatted = realPits.map((p, idx) => {
+      const dur = (p.pit_out_elapsed_time && p.pit_in_elapsed_time)
+        ? `${(p.pit_out_elapsed_time - p.pit_in_elapsed_time).toFixed(1)}s`
+        : '—';
+      return { stop: idx + 1, lap: p.pit_in_lap_count || '—', dur, tires: 'PIT STOP' };
+    });
+
+    // 7. POSITION HISTORY — track across polls
+    if (!positionHistory[v.vehicle_number]) positionHistory[v.vehicle_number] = [];
+    positionHistory[v.vehicle_number].push(pos);
+    if (positionHistory[v.vehicle_number].length > 50) positionHistory[v.vehicle_number].shift();
+    const historyArr = positionHistory[v.vehicle_number].length > 1
+      ? positionHistory[v.vehicle_number]
+      : [pos, pos];
+
+    // 8. GAP — show "OFF" if car is out
+    const gap = isOut ? 'OFF' : formatGap(v.delta, pos);
+
+    return {
+      name,
+      num: v.vehicle_number || '0',
+      team: (typeof v.sponsor_name === 'string' ? v.sponsor_name : '') || (driverObj.sponsor_name || '') || '',
+      mfr,
+      initials: getInitials(name),
+      pos: `P${pos}`,
+      gap,
+      lapsLed: lapsLedCount.toString(),
+      speed: (v.last_lap_speed || 0).toFixed(1),
+      lastLapTime: v.last_lap_time ? `${parseFloat(v.last_lap_time).toFixed(3)}s` : null,
+      stagePts: stagePts.toString(),
+      fastLap: v.best_lap_time ? `${parseFloat(v.best_lap_time).toFixed(3)}s` : '—',
+      tireAge: lapsSincePit !== null ? `${lapsSincePit} laps` : '—',
+      isFastestLap: v.vehicle_number === fastestLap.id,
+      isOut,
+      ahead: sorted[i - 1] ? (
+        `${(sorted[i-1].driver || {}).first_name || ''} ${(sorted[i-1].driver || {}).last_name || ''}`.trim() || `#${sorted[i-1].vehicle_number}`
+      ) : null,
+      aheadGap: i > 0 ? formatGap(v.delta, pos) : '',
+      behind: sorted[i + 1] ? (
+        `${(sorted[i+1].driver || {}).first_name || ''} ${(sorted[i+1].driver || {}).last_name || ''}`.trim() || `#${sorted[i+1].vehicle_number}`
+      ) : null,
+      behindGap: sorted[i + 1] ? formatGap(sorted[i+1].delta, pos + 1) : '',
+      posChange,
+      freshTires: lapsSincePit !== null && lapsSincePit <= 5,
+      pitInfo: lapsSincePit !== null ? `${lapsSincePit} LAPS AGO` : `${pitCount} STOP${pitCount !== 1 ? 'S' : ''}`,
+      lapsDown,
+      positions: historyArr,
+      pits: pitsFormatted,
+    };
+  });
+
+  renderLeaderboard(drivers);
+  window._liveDrivers = drivers;
+}
+
+function processSchedule(raw) {
+  const data = Array.isArray(raw) ? raw
+    : Array.isArray(raw?.schedule) ? raw.schedule
+    : Array.isArray(raw?.races)    ? raw.races
+    : null;
+  if (!data || !data.length) return SERIES_SCHEDULE?.[currentSeries] || cupSchedule;
+  const now = new Date();
+  let nextMarked = false;
+
+  return data.map(race => {
+    const raceDate = new Date(race.race_date || race.date_scheduled || '');
+    const isPast = raceDate < now;
+    const isNext = !nextMarked && !isPast;
+    if (isNext) nextMarked = true;
+
+    const typeMap = { 'Superspeedway': 'super', 'Road Course': 'road', 'Oval': 'oval', 'Short Track': 'oval', 'Intermediate': 'oval' };
+    const trackType = typeMap[race.track_type] || 'oval';
+    const dateStr = raceDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+    const winner = race.winner_driver_name || race.winning_driver_full_name || race.race_winner || null;
+
+    return {
+      track: race.track_name || race.race_name || 'TBD',
+      event: race.race_name || '',
+      date: dateStr || '—',
+      type: trackType,
+      dist: race.track_length ? `${race.track_length} mi` : '—',
+      next: isNext,
+      past: isPast,
+      winner,
+    };
+  });
+}
+
+function processStandings(raw) {
+  const data = Array.isArray(raw) ? raw
+    : Array.isArray(raw?.standings)       ? raw.standings
+    : Array.isArray(raw?.DriverStandings) ? raw.DriverStandings
+    : Array.isArray(raw?.drivers)         ? raw.drivers
+    : null;
+  if (!data || !data.length) return SERIES_STANDINGS?.[currentSeries] || cupStandings;
+  const leader = data[0]?.points || 0;
+
+  return data.slice(0, 40).map((d, i) => {
+    const mfr = getMfr(d.car_make || '');
+    const name = `${d.first_name || ''} ${d.last_name || ''}`.trim();
+    const pts = d.points || 0;
+    const playoffPts = d.playoff_points || 0;
+    const diff = i === 0 ? '–' : `-${leader - pts}`;
+    return {
+      name: name || d.driver_name || 'Unknown',
+      mfr,
+      initials: getInitials(name),
+      wins: d.wins || 0,
+      pts,
+      playoffPts,
+      diff,
+      playoff: playoffPts > 0 || i < 16,
+    };
+  });
+}
+
+// ── POLLING LOGIC ─────────────────────────────────────────────────────────────
+function startPolling() {
+  // Initial fetch
+  fetchLiveFeedForSeries(currentSeries);
+  fetchScheduleForSeries(currentSeries);
+  fetchStandingsForSeries(currentSeries);
+
+  // Dynamic poll: 10s during live race, 60s otherwise
+  function schedulePoll() {
+    setTimeout(() => {
+      fetchLiveFeedForSeries(currentSeries);
+      schedulePoll();
+    }, isRaceLive ? 10000 : 60000);
+  }
+  schedulePoll();
+
+  // Schedule + standings refresh every 5 minutes
+  setInterval(() => {
+    fetchScheduleForSeries(currentSeries);
+    fetchStandingsForSeries(currentSeries);
+  }, 300000);
+}
+
+// ── PLACEHOLDER DATA (fallback when API unavailable) ─────────────────────────
+const cupDrivers = [
+  {
+    name: 'Kyle Larson',      num: '5',  team: 'Hendrick',  mfr: 'chevy',  initials: 'KL',
+    pos: 'P1',  gap: 'LEADER',  lapsLed: '42', speed: '148.2', stagePts: '18',
+    fastLap: '28.441s', tireAge: '2 laps', isFastestLap: true,
+    ahead: null, aheadGap: '', behind: 'Joey Logano', behindGap: '+0.841',
+    posChange: 'same', freshTires: true, pitInfo: 'FRESH TIRES',
+    positions: [1,1,2,1,1,1,3,2,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    pits: [{stop:1,lap:105,dur:'12.4s',tires:'4 TIRES'},{stop:2,lap:205,dur:'11.8s',tires:'4 TIRES'},{stop:3,lap:310,dur:'11.2s',tires:'4 TIRES'}],
+  },
+  {
+    name: 'Joey Logano',      num: '22', team: 'Penske',    mfr: 'ford',   initials: 'JL',
+    pos: 'P2',  gap: '+0.841', lapsLed: '8',  speed: '147.9', stagePts: '9',
+    fastLap: '28.612s', tireAge: '12 laps',
+    ahead: 'Kyle Larson', aheadGap: '-0.841', behind: 'Denny Hamlin', behindGap: '+0.362',
+    posChange: 'up', pitInfo: '12 LAPS AGO',
+    positions: [3,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,4,4,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2],
+    pits: [{stop:1,lap:110,dur:'12.8s',tires:'4 TIRES'},{stop:2,lap:210,dur:'12.1s',tires:'4 TIRES'},{stop:3,lap:300,dur:'11.9s',tires:'2 TIRES'}],
+  },
+  {
+    name: 'Denny Hamlin',     num: '11', team: 'Joe Gibbs', mfr: 'toyota', initials: 'DH',
+    pos: 'P3',  gap: '+1.203', lapsLed: '22', speed: '147.7', stagePts: '12',
+    fastLap: '28.701s', tireAge: '15 laps',
+    ahead: 'Joey Logano', aheadGap: '-0.362', behind: 'Alex Bowman', behindGap: '+0.911',
+    posChange: 'same', pitInfo: '15 LAPS AGO',
+    positions: [2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3],
+    pits: [{stop:1,lap:108,dur:'13.1s',tires:'4 TIRES'},{stop:2,lap:208,dur:'12.4s',tires:'4 TIRES'},{stop:3,lap:297,dur:'12.0s',tires:'4 TIRES'}],
+  },
+  {
+    name: 'Alex Bowman',      num: '48', team: 'Hendrick',  mfr: 'chevy',  initials: 'AB',
+    pos: 'P4',  gap: '+2.114', lapsLed: '5',  speed: '147.5', stagePts: '7',
+    fastLap: '28.801s', tireAge: '20 laps',
+    ahead: 'Denny Hamlin', aheadGap: '-0.911', behind: 'Chase Elliott', behindGap: '+1.327',
+    posChange: 'down', pitInfo: '20 LAPS AGO',
+    positions: [5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
+    pits: [{stop:1,lap:112,dur:'12.6s',tires:'4 TIRES'},{stop:2,lap:212,dur:'12.2s',tires:'4 TIRES'},{stop:3,lap:292,dur:'11.7s',tires:'4 TIRES'}],
+  },
+  {
+    name: 'Chase Elliott',    num: '9',  team: 'Hendrick',  mfr: 'chevy',  initials: 'CE',
+    pos: 'P5',  gap: '+3.441', lapsLed: '3',  speed: '146.9', stagePts: '5',
+    fastLap: '29.012s', tireAge: '25 laps',
+    ahead: 'Alex Bowman', aheadGap: '-1.327', behind: 'Austin Cindric', behindGap: '+1.571',
+    posChange: 'up', pitInfo: '25 LAPS AGO',
+    positions: [7,7,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6],
+    pits: [{stop:1,lap:115,dur:'13.2s',tires:'4 TIRES'},{stop:2,lap:215,dur:'12.7s',tires:'4 TIRES'},{stop:3,lap:287,dur:'12.1s',tires:'4 TIRES'}],
+  },
+  {
+    name: 'Austin Cindric',   num: '2',  team: 'Penske',    mfr: 'ford',   initials: 'AC',
+    pos: 'P6',  gap: '+5.012', lapsLed: '0',  speed: '146.7', stagePts: '4',
+    fastLap: '29.101s', tireAge: '18 laps',
+    ahead: 'Chase Elliott', aheadGap: '-1.571', behind: 'Ty Gibbs', behindGap: '+1.766',
+    posChange: 'down', pitInfo: '18 LAPS AGO',
+    positions: [8,8,8,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7],
+    pits: [{stop:1,lap:118,dur:'13.0s',tires:'4 TIRES'},{stop:2,lap:218,dur:'12.5s',tires:'4 TIRES'},{stop:3,lap:294,dur:'12.2s',tires:'2 TIRES'}],
+  },
+  {
+    name: 'Ty Gibbs',         num: '54', team: 'Joe Gibbs', mfr: 'toyota', initials: 'TG',
+    pos: 'P7',  gap: '+6.778', lapsLed: '0',  speed: '146.4', stagePts: '3',
+    fastLap: '29.201s', tireAge: '30 laps',
+    ahead: 'Austin Cindric', aheadGap: '-1.766', behind: 'Christopher Bell', behindGap: '+1.423',
+    posChange: 'same', pitInfo: '30 LAPS AGO',
+    positions: [9,9,9,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8],
+    pits: [{stop:1,lap:120,dur:'13.4s',tires:'4 TIRES'},{stop:2,lap:220,dur:'12.8s',tires:'4 TIRES'},{stop:3,lap:282,dur:'12.4s',tires:'4 TIRES'}],
+  },
+  {
+    name: 'Christopher Bell', num: '20', team: 'Joe Gibbs', mfr: 'toyota', initials: 'CB',
+    pos: 'P8',  gap: '+8.201', lapsLed: '0',  speed: '146.1', stagePts: '2',
+    fastLap: '29.341s', tireAge: '22 laps',
+    ahead: 'Ty Gibbs', aheadGap: '-1.423', behind: 'William Byron', behindGap: '+1.353',
+    posChange: 'down', pitInfo: '22 LAPS AGO',
+    positions: [10,10,10,10,10,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9],
+    pits: [{stop:1,lap:122,dur:'13.6s',tires:'4 TIRES'},{stop:2,lap:222,dur:'13.0s',tires:'4 TIRES'},{stop:3,lap:290,dur:'12.6s',tires:'4 TIRES'}],
+  },
+  {
+    name: 'William Byron',    num: '24', team: 'Hendrick',  mfr: 'chevy',  initials: 'WB',
+    pos: 'P9',  gap: '+9.554', lapsLed: '0',  speed: '145.8', stagePts: '1',
+    fastLap: '29.412s', tireAge: '28 laps',
+    ahead: 'Christopher Bell', aheadGap: '-1.353', behind: 'Michael McDowell', behindGap: '+1.649',
+    posChange: 'up', pitInfo: '28 LAPS AGO',
+    positions: [11,11,11,11,11,11,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10],
+    pits: [{stop:1,lap:124,dur:'13.8s',tires:'4 TIRES'},{stop:2,lap:224,dur:'13.2s',tires:'4 TIRES'},{stop:3,lap:288,dur:'12.8s',tires:'4 TIRES'}],
+  },
+  {
+    name: 'Michael McDowell', num: '34', team: 'Front Row', mfr: 'ford',   initials: 'MM',
+    pos: 'P10', gap: '+11.203',lapsLed: '0',  speed: '145.4', stagePts: '0',
+    fastLap: '29.512s', tireAge: '35 laps',
+    ahead: 'William Byron', aheadGap: '-1.649', behind: null, behindGap: '',
+    posChange: 'up', lapsDown: '1 LAP DOWN',
+    positions: [12,12,12,12,12,12,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11],
+    pits: [{stop:1,lap:125,dur:'14.1s',tires:'4 TIRES'},{stop:2,lap:225,dur:'13.5s',tires:'4 TIRES'},{stop:3,lap:285,dur:'13.0s',tires:'4 TIRES'}],
+  },
+];
+
+const cupSchedule = [
+  { track: 'Bowman Gray Stadium',             event: 'Cook Out Clash',                    date: 'FEB 4',  type: 'oval',  dist: '0.25 mi',  past: true,  tv: 'FOX',   time: '8:00PM ET' },
+  { track: 'Daytona International Speedway',  event: 'Daytona 500',                       date: 'FEB 15', type: 'super', dist: '2.5 mi',   past: true,  tv: 'FOX',   time: '2:30PM ET' },
+  { track: 'EchoPark Speedway',               event: 'Autotrader 400',                    date: 'FEB 22', type: 'super', dist: '1.54 mi',  past: true,  tv: 'FOX',   time: '3:00PM ET' },
+  { track: 'Circuit of the Americas',         event: 'DuraMAX Grand Prix',                date: 'MAR 1',  type: 'road',  dist: '3.426 mi', past: true,  tv: 'FOX',   time: '3:30PM ET' },
+  { track: 'Phoenix Raceway',                 event: 'Straight Talk Wireless 500',        date: 'MAR 8',  type: 'oval',  dist: '1 mi',     past: true,  tv: 'FS1',   time: '3:30PM ET' },
+  { track: 'Las Vegas Motor Speedway',        event: 'Pennzoil 400',                      date: 'MAR 15', type: 'oval',  dist: '1.5 mi',   past: true,  tv: 'FS1',   time: '4:00PM ET' },
+  { track: 'Darlington Raceway',              event: 'Goodyear 400',                      date: 'MAR 22', type: 'oval',  dist: '1.366 mi', past: true,  tv: 'FS1',   time: '3:00PM ET' },
+  { track: 'Martinsville Speedway',           event: 'Cook Out 400',                      date: 'MAR 29', type: 'oval',  dist: '0.526 mi', past: true,  tv: 'FS1',   time: '3:30PM ET' },
+  { track: 'Bristol Motor Speedway',          event: 'Food City 500',                     date: 'APR 12', type: 'oval',  dist: '0.533 mi', past: true,  tv: 'FS1',   time: '3:00PM ET' },
+  { track: 'Kansas Speedway',                 event: 'AdventHealth 400',                  date: 'APR 19', type: 'oval',  dist: '1.5 mi',   past: true,  tv: 'FOX',   time: '2:00PM ET' },
+  { track: 'Talladega Superspeedway',         event: 'Jack Link\'s 500',                  date: 'APR 26', type: 'super', dist: '2.66 mi',  past: true,  tv: 'FOX',   time: '3:00PM ET' },
+  { track: 'Texas Motor Speedway',            event: 'Würth 400',                         date: 'MAY 3',  type: 'oval',  dist: '1.5 mi',   past: true,  tv: 'FS1',   time: '3:30PM ET' },
+  { track: 'Watkins Glen International',      event: 'Go Bowling at the Glen',            date: 'MAY 10', type: 'road',  dist: '2.454 mi', past: true,  tv: 'FS1',   time: '3:00PM ET' },
+  { track: 'Dover Motor Speedway',            event: 'All-Star Race',                     date: 'MAY 17', type: 'oval',  dist: '1 mi',     past: true,  tv: 'FS1',   time: '1:00PM ET' },
+  { track: 'Charlotte Motor Speedway',        event: 'Coca-Cola 600',                     date: 'MAY 24', type: 'oval',  dist: '1.5 mi',   past: true,  tv: 'Prime', time: '6:00PM ET' },
+  { track: 'Nashville Superspeedway',         event: 'Cracker Barrel 400',                date: 'MAY 31', type: 'oval',  dist: '1.333 mi', past: true,  tv: 'Prime', time: '7:00PM ET' },
+  { track: 'Michigan International Speedway', event: 'FireKeepers Casino 400',            date: 'JUN 7',  type: 'oval',  dist: '2 mi',     past: true,  tv: 'Prime', time: '3:00PM ET' },
+  { track: 'Pocono Raceway',                  event: 'Great American Getaway 400',        date: 'JUN 14', type: 'super', dist: '2.5 mi',   past: true,  tv: 'Prime', time: '1:00PM ET' },
+  { track: 'Naval Base Coronado',             event: 'Anduril 250 Race the Base',         date: 'JUN 21', type: 'oval',  dist: '0.894 mi', past: true,  tv: 'Prime', time: '4:00PM ET' },
+  { track: 'Sonoma Raceway',                  event: 'Toyota / Save Mart 350',            date: 'JUN 28', type: 'road',  dist: '1.99 mi',  next: true,  tv: 'TNT',   time: '3:30PM ET', bracket: 'Round of 32' },
+  { track: 'Chicagoland Speedway',            event: 'eero 400',                          date: 'JUL 5',  type: 'oval',  dist: '1.5 mi',   tv: 'TNT',   time: '6:00PM ET', bracket: 'Round of 16' },
+  { track: 'EchoPark Speedway',               event: 'Quaker State 400',                  date: 'JUL 12', type: 'super', dist: '1.54 mi',  tv: 'TNT',   time: '7:00PM ET', bracket: 'Elite Eight' },
+  { track: 'North Wilkesboro Speedway',       event: 'Window World 450',                  date: 'JUL 19', type: 'oval',  dist: '0.625 mi', tv: 'TNT',   time: '7:00PM ET', bracket: 'Final Four' },
+  { track: 'Indianapolis Motor Speedway',     event: 'Brickyard 400',                     date: 'JUL 26', type: 'oval',  dist: '2.5 mi',   tv: 'TNT',   time: '2:00PM ET', bracket: 'Championship' },
+  { track: 'Iowa Speedway',                   event: 'Iowa Corn 350',                     date: 'AUG 9',  type: 'oval',  dist: '0.875 mi', tv: 'USA',   time: '3:30PM ET' },
+  { track: 'Richmond Raceway',                event: 'Cook Out 400',                      date: 'AUG 15', type: 'oval',  dist: '0.75 mi',  tv: 'USA',   time: '7:00PM ET' },
+  { track: 'New Hampshire Motor Speedway',    event: 'Dollar Tree 301',                   date: 'AUG 23', type: 'oval',  dist: '1.058 mi', tv: 'USA',   time: '3:00PM ET' },
+  { track: 'Daytona International Speedway',  event: 'Coke Zero Sugar 400',               date: 'AUG 29', type: 'super', dist: '2.5 mi',   tv: 'NBC',   time: '7:30PM ET' },
+  { track: 'Darlington Raceway',              event: 'Cook Out Southern 500',             date: 'SEP 6',  type: 'oval',  dist: '1.366 mi', tv: 'USA',   time: '5:00PM ET' },
+  { track: 'World Wide Technology Raceway',   event: 'Enjoy Illinois 300',                date: 'SEP 13', type: 'oval',  dist: '1.25 mi',  tv: 'USA',   time: '3:00PM ET' },
+  { track: 'Bristol Motor Speedway',          event: 'Bass Pro Shops Night Race',         date: 'SEP 19', type: 'oval',  dist: '0.533 mi', tv: 'USA',   time: '7:30PM ET' },
+  { track: 'Kansas Speedway',                 event: 'Hollywood Casino 400',              date: 'SEP 27', type: 'oval',  dist: '1.5 mi',   tv: 'USA',   time: '3:00PM ET' },
+  { track: 'Las Vegas Motor Speedway',        event: 'South Point 400',                   date: 'OCT 4',  type: 'oval',  dist: '1.5 mi',   tv: 'USA',   time: '5:30PM ET' },
+  { track: 'Charlotte Motor Speedway',        event: 'Bank of America 400',               date: 'OCT 11', type: 'oval',  dist: '1.5 mi',   tv: 'USA',   time: '3:00PM ET' },
+  { track: 'Phoenix Raceway',                 event: 'TBA',                               date: 'OCT 18', type: 'oval',  dist: '1 mi',     tv: 'USA',   time: '3:00PM ET' },
+  { track: 'Talladega Superspeedway',         event: 'YellaWood 500',                     date: 'OCT 25', type: 'super', dist: '2.66 mi',  tv: 'NBC',   time: '2:00PM ET' },
+  { track: 'Martinsville Speedway',           event: 'Xfinity 500',                       date: 'NOV 1',  type: 'oval',  dist: '0.526 mi', tv: 'NBC',   time: '2:00PM ET' },
+  { track: 'Homestead-Miami Speedway',        event: 'NASCAR Cup Series Championship',    date: 'NOV 8',  type: 'oval',  dist: '1.5 mi',   tv: 'NBC',   time: '3:00PM ET' },
+];
+
+const cupStandings = [
+  { name: 'Kyle Larson',       mfr: 'chevy',  initials: 'KL', wins: 3, pts: 612, diff: '–',    playoffPts: 38, playoff: true },
+  { name: 'Joey Logano',       mfr: 'ford',   initials: 'JL', wins: 1, pts: 588, diff: '-24',  playoffPts: 17, playoff: true },
+  { name: 'Denny Hamlin',      mfr: 'toyota', initials: 'DH', wins: 2, pts: 571, diff: '-41',  playoffPts: 27, playoff: true },
+  { name: 'Chase Elliott',     mfr: 'chevy',  initials: 'CE', wins: 1, pts: 554, diff: '-58',  playoffPts: 17, playoff: true },
+  { name: 'Christopher Bell',  mfr: 'toyota', initials: 'CB', wins: 1, pts: 541, diff: '-71',  playoffPts: 17, playoff: true },
+  { name: 'Alex Bowman',       mfr: 'chevy',  initials: 'AB', wins: 0, pts: 528, diff: '-84',  playoffPts: 10, playoff: true },
+  { name: 'Austin Cindric',    mfr: 'ford',   initials: 'AC', wins: 1, pts: 512, diff: '-100', playoffPts: 17, playoff: true },
+  { name: 'Ty Gibbs',          mfr: 'toyota', initials: 'TG', wins: 0, pts: 499, diff: '-113', playoffPts: 10, playoff: true },
+  { name: 'William Byron',     mfr: 'chevy',  initials: 'WB', wins: 0, pts: 488, diff: '-124', playoffPts: 10, playoff: false },
+  { name: 'Michael McDowell',  mfr: 'ford',   initials: 'MM', wins: 0, pts: 471, diff: '-141', playoffPts:  5, playoff: false },
+];
+
+// ── XFINITY SERIES DATA ───────────────────────────────────────────────────────
+const xfinityDrivers = [
+  { name: 'Justin Allgaier',      num: '7',  team: 'JR Motorsports',     mfr: 'chevy',  initials: 'JA', pos: 'P1',  gap: 'LEADER',  lapsLed: '38', speed: '138.4', stagePts: '15', fastLap: '29.441s', tireAge: '3 laps', isFastestLap: true,  ahead: null,               aheadGap: '',      behind: 'Austin Hill',        behindGap: '+0.712', posChange: 'same', freshTires: true,  pitInfo: 'FRESH TIRES', positions: [1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], pits: [{stop:1,lap:85,dur:'12.1s',tires:'4 TIRES'},{stop:2,lap:185,dur:'11.7s',tires:'4 TIRES'}] },
+  { name: 'Austin Hill',          num: '21', team: 'Richard Childress',   mfr: 'chevy',  initials: 'AH', pos: 'P2',  gap: '+0.712',  lapsLed: '12', speed: '138.1', stagePts: '9',  fastLap: '29.612s', tireAge: '14 laps',                        ahead: 'Justin Allgaier',  aheadGap: '-0.712', behind: 'Sheldon Creed',      behindGap: '+0.881', posChange: 'up',   freshTires: false, pitInfo: '14 LAPS AGO', positions: [3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2], pits: [{stop:1,lap:90,dur:'12.4s',tires:'4 TIRES'},{stop:2,lap:188,dur:'12.0s',tires:'4 TIRES'}] },
+  { name: 'Sheldon Creed',        num: '18', team: 'Joe Gibbs Racing',    mfr: 'toyota', initials: 'SC', pos: 'P3',  gap: '+1.593',  lapsLed: '18', speed: '137.8', stagePts: '12', fastLap: '29.701s', tireAge: '18 laps',                        ahead: 'Austin Hill',      aheadGap: '-0.881', behind: 'AJ Allmendinger',   behindGap: '+0.543', posChange: 'same', freshTires: false, pitInfo: '18 LAPS AGO', positions: [2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3], pits: [{stop:1,lap:88,dur:'12.6s',tires:'4 TIRES'},{stop:2,lap:182,dur:'12.2s',tires:'4 TIRES'}] },
+  { name: 'AJ Allmendinger',      num: '16', team: 'Kaulig Racing',       mfr: 'chevy',  initials: 'AJ', pos: 'P4',  gap: '+2.136',  lapsLed: '5',  speed: '137.5', stagePts: '7',  fastLap: '29.801s', tireAge: '22 laps',                        ahead: 'Sheldon Creed',    aheadGap: '-0.543', behind: 'Shane Van Gisbergen',behindGap: '+1.204', posChange: 'down', freshTires: false, pitInfo: '22 LAPS AGO', positions: [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4], pits: [{stop:1,lap:92,dur:'12.8s',tires:'4 TIRES'},{stop:2,lap:186,dur:'12.5s',tires:'4 TIRES'}] },
+  { name: 'Shane Van Gisbergen',  num: '97', team: 'Kaulig Racing',       mfr: 'chevy',  initials: 'SV', pos: 'P5',  gap: '+3.340',  lapsLed: '0',  speed: '137.2', stagePts: '5',  fastLap: '29.901s', tireAge: '26 laps',                        ahead: 'AJ Allmendinger',  aheadGap: '-1.204', behind: 'John H. Nemechek',  behindGap: '+1.422', posChange: 'up',   freshTires: false, pitInfo: '26 LAPS AGO', positions: [6,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5], pits: [{stop:1,lap:95,dur:'13.0s',tires:'4 TIRES'},{stop:2,lap:184,dur:'12.7s',tires:'4 TIRES'}] },
+  { name: 'John H. Nemechek',     num: '20', team: 'Joe Gibbs Racing',    mfr: 'toyota', initials: 'JN', pos: 'P6',  gap: '+4.762',  lapsLed: '0',  speed: '136.9', stagePts: '4',  fastLap: '30.001s', tireAge: '19 laps',                        ahead: 'Shane Van Gisbergen',aheadGap:'-1.422', behind: 'Jesse Love',        behindGap: '+1.634', posChange: 'down', freshTires: false, pitInfo: '19 LAPS AGO', positions: [7,7,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6], pits: [{stop:1,lap:98,dur:'13.2s',tires:'4 TIRES'},{stop:2,lap:190,dur:'12.9s',tires:'4 TIRES'}] },
+  { name: 'Jesse Love',           num: '2',  team: 'Richard Childress',   mfr: 'chevy',  initials: 'JL', pos: 'P7',  gap: '+6.396',  lapsLed: '0',  speed: '136.5', stagePts: '3',  fastLap: '30.121s', tireAge: '30 laps',                        ahead: 'John H. Nemechek', aheadGap: '-1.634', behind: 'Sam Mayer',         behindGap: '+1.201', posChange: 'same', freshTires: false, pitInfo: '30 LAPS AGO', positions: [8,8,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7], pits: [{stop:1,lap:100,dur:'13.4s',tires:'4 TIRES'},{stop:2,lap:192,dur:'13.1s',tires:'4 TIRES'}] },
+  { name: 'Sam Mayer',            num: '1',  team: 'JR Motorsports',      mfr: 'chevy',  initials: 'SM', pos: 'P8',  gap: '+7.597',  lapsLed: '0',  speed: '136.1', stagePts: '2',  fastLap: '30.241s', tireAge: '24 laps',                        ahead: 'Jesse Love',       aheadGap: '-1.201', behind: 'Josh Berry',        behindGap: '+1.809', posChange: 'down', freshTires: false, pitInfo: '24 LAPS AGO', positions: [9,9,9,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8], pits: [{stop:1,lap:102,dur:'13.6s',tires:'4 TIRES'},{stop:2,lap:193,dur:'13.3s',tires:'4 TIRES'}] },
+  { name: 'Josh Berry',           num: '8',  team: 'JR Motorsports',      mfr: 'chevy',  initials: 'JB', pos: 'P9',  gap: '+9.406',  lapsLed: '0',  speed: '135.8', stagePts: '1',  fastLap: '30.341s', tireAge: '27 laps',                        ahead: 'Sam Mayer',        aheadGap: '-1.809', behind: 'Cole Custer',       behindGap: '+1.502', posChange: 'up',   freshTires: false, pitInfo: '27 LAPS AGO', positions: [10,10,10,10,10,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9], pits: [{stop:1,lap:104,dur:'13.8s',tires:'4 TIRES'},{stop:2,lap:195,dur:'13.5s',tires:'4 TIRES'}] },
+  { name: 'Cole Custer',          num: '41', team: 'HendrickCars.com',    mfr: 'chevy',  initials: 'CC', pos: 'P10', gap: '+10.908', lapsLed: '0',  speed: '135.4', stagePts: '0',  fastLap: '30.441s', tireAge: '33 laps',                        ahead: 'Josh Berry',       aheadGap: '-1.502', behind: null,                behindGap: '',       posChange: 'up',   freshTires: false, pitInfo: '33 LAPS AGO', positions: [11,11,11,11,11,11,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10], pits: [{stop:1,lap:106,dur:'14.0s',tires:'4 TIRES'},{stop:2,lap:197,dur:'13.7s',tires:'4 TIRES'}] },
+];
+
+const xfinitySchedule = [
+  { track: 'Daytona International Speedway',  event: 'United Rentals 300',                    date: 'FEB 14', type: 'super', dist: '2.5 mi',   past: true,  tv: 'CW',  time: '5:00PM ET' },
+  { track: 'EchoPark Speedway',               event: 'Bennett Transportation 250',            date: 'FEB 21', type: 'super', dist: '1.54 mi',  past: true,  tv: 'CW',  time: '5:00PM ET' },
+  { track: 'Circuit of the Americas',         event: 'Focused Health 250',                    date: 'FEB 28', type: 'road',  dist: '3.426 mi', past: true,  tv: 'CW',  time: '3:00PM ET' },
+  { track: 'Phoenix Raceway',                 event: 'GOVX 200',                              date: 'MAR 7',  type: 'oval',  dist: '1 mi',     past: true,  tv: 'CW',  time: '7:30PM ET' },
+  { track: 'Las Vegas Motor Speedway',        event: 'The LiUNA!',                            date: 'MAR 14', type: 'oval',  dist: '1.5 mi',   past: true,  tv: 'CW',  time: '5:30PM ET' },
+  { track: 'Darlington Raceway',              event: 'Sport Clips VFW Help A Hero 200',       date: 'MAR 21', type: 'oval',  dist: '1.366 mi', past: true,  tv: 'CW',  time: '5:30PM ET' },
+  { track: 'Martinsville Speedway',           event: 'NFPA 250',                              date: 'MAR 28', type: 'oval',  dist: '0.526 mi', past: true,  tv: 'CW',  time: '3:30PM ET' },
+  { track: 'Rockingham Speedway',             event: 'NC Education Lottery 250',              date: 'APR 4',  type: 'oval',  dist: '1.017 mi', past: true,  tv: 'CW',  time: '2:30PM ET' },
+  { track: 'Bristol Motor Speedway',          event: 'Suburban Propane 300',                  date: 'APR 11', type: 'oval',  dist: '0.533 mi', past: true,  tv: 'CW',  time: '7:30PM ET' },
+  { track: 'Kansas Speedway',                 event: 'Kansas Lottery 300',                    date: 'APR 18', type: 'oval',  dist: '1.5 mi',   past: true,  tv: 'CW',  time: '7:00PM ET' },
+  { track: 'Talladega Superspeedway',         event: 'Ag-Pro 300',                            date: 'APR 25', type: 'super', dist: '2.66 mi',  past: true,  tv: 'CW',  time: '4:00PM ET' },
+  { track: 'Texas Motor Speedway',            event: 'Andy\'s Frozen Custard 340',            date: 'MAY 2',  type: 'oval',  dist: '1.5 mi',   past: true,  tv: 'CW',  time: '3:30PM ET' },
+  { track: 'Watkins Glen International',      event: 'Mission 200 at The Glen',               date: 'MAY 9',  type: 'road',  dist: '2.454 mi', past: true,  tv: 'CW',  time: '4:00PM ET' },
+  { track: 'Dover Motor Speedway',            event: 'BetRivers 200',                         date: 'MAY 16', type: 'oval',  dist: '1 mi',     past: true,  tv: 'CW',  time: '4:00PM ET' },
+  { track: 'Charlotte Motor Speedway',        event: 'Charbroil 300',                         date: 'MAY 23', type: 'oval',  dist: '1.5 mi',   past: true,  tv: 'CW',  time: '5:00PM ET' },
+  { track: 'Nashville Superspeedway',         event: 'Sports Illustrated Resorts 250',        date: 'MAY 30', type: 'oval',  dist: '1.333 mi', past: true,  tv: 'CW',  time: '7:30PM ET' },
+  { track: 'Pocono Raceway',                  event: 'MillerTech Battery 250',                date: 'JUN 13', type: 'super', dist: '2.5 mi',   past: true,  tv: 'CW',  time: '4:00PM ET' },
+  { track: 'Naval Base Coronado',             event: 'United Rentals Driven to Serve 250',    date: 'JUN 20', type: 'oval',  dist: '0.894 mi', past: true,  tv: 'CW',  time: '5:00PM ET' },
+  { track: 'Sonoma Raceway',                  event: 'Pit Boss/FoodMaxx 250',                 date: 'JUN 27', type: 'road',  dist: '1.99 mi',  next: true,  tv: 'CW',  time: '5:30PM ET' },
+  { track: 'Chicagoland Speedway',            event: 'N/A',                                   date: 'JUL 4',  type: 'oval',  dist: '1.5 mi',   tv: 'CW',  time: '5:30PM ET' },
+  { track: 'EchoPark Speedway',               event: 'Focused Health 250',                    date: 'JUL 11', type: 'super', dist: '1.54 mi',  tv: 'CW',  time: '7:00PM ET' },
+  { track: 'Indianapolis Motor Speedway',     event: 'Pennzoil 250',                          date: 'JUL 25', type: 'oval',  dist: '2.5 mi',   tv: 'CW',  time: '4:00PM ET' },
+  { track: 'Iowa Speedway',                   event: 'Hy-Vee Perks 250',                      date: 'AUG 8',  type: 'oval',  dist: '0.875 mi', tv: 'CW',  time: '5:00PM ET' },
+  { track: 'Daytona International Speedway',  event: 'Wawa 250',                              date: 'AUG 28', type: 'super', dist: '2.5 mi',   tv: 'CW',  time: '7:30PM ET' },
+  { track: 'Darlington Raceway',              event: 'N/A',                                   date: 'SEP 5',  type: 'oval',  dist: '1.366 mi', tv: 'CW',  time: '7:30PM ET' },
+  { track: 'World Wide Technology Raceway',   event: 'Nu Way 225',                            date: 'SEP 12', type: 'oval',  dist: '1.25 mi',  tv: 'CW',  time: '7:30PM ET' },
+  { track: 'Bristol Motor Speedway',          event: 'Food City 300',                         date: 'SEP 18', type: 'oval',  dist: '0.533 mi', tv: 'CW',  time: '7:30PM ET' },
+  { track: 'Las Vegas Motor Speedway',        event: 'Focused Health 302',                    date: 'OCT 3',  type: 'oval',  dist: '1.5 mi',   tv: 'CW',  time: '7:30PM ET' },
+  { track: 'Charlotte Motor Speedway',        event: 'Blue Cross NC 250',                     date: 'OCT 10', type: 'oval',  dist: '1.5 mi',   tv: 'CW',  time: '4:00PM ET' },
+  { track: 'Phoenix Raceway',                 event: 'N/A',                                   date: 'OCT 17', type: 'oval',  dist: '1 mi',     tv: 'CW',  time: '7:30PM ET' },
+  { track: 'Talladega Superspeedway',         event: 'The Progress Group 250',                date: 'OCT 24', type: 'super', dist: '2.66 mi',  tv: 'CW',  time: '3:30PM ET' },
+  { track: 'Martinsville Speedway',           event: 'IAA and Ritchie Bros. 250',             date: 'OCT 31', type: 'oval',  dist: '0.526 mi', tv: 'CW',  time: '4:00PM ET' },
+  { track: 'Homestead-Miami Speedway',        event: 'O\'Reilly Auto Parts Series Championship', date: 'NOV 7', type: 'oval', dist: '1.5 mi', tv: 'CW',  time: '5:00PM ET' },
+];
+
+const xfinityStandings = [
+  { name: 'Justin Allgaier',     mfr: 'chevy',  initials: 'JA', wins: 2, pts: 482, diff: '–',    playoffPts: 27, playoff: true },
+  { name: 'Sheldon Creed',       mfr: 'toyota', initials: 'SC', wins: 2, pts: 461, diff: '-21',  playoffPts: 27, playoff: true },
+  { name: 'Austin Hill',         mfr: 'chevy',  initials: 'AH', wins: 1, pts: 448, diff: '-34',  playoffPts: 17, playoff: true },
+  { name: 'AJ Allmendinger',     mfr: 'chevy',  initials: 'AJ', wins: 1, pts: 432, diff: '-50',  playoffPts: 17, playoff: true },
+  { name: 'Shane Van Gisbergen', mfr: 'chevy',  initials: 'SV', wins: 1, pts: 418, diff: '-64',  playoffPts: 17, playoff: true },
+  { name: 'John H. Nemechek',    mfr: 'toyota', initials: 'JN', wins: 1, pts: 405, diff: '-77',  playoffPts: 17, playoff: true },
+  { name: 'Jesse Love',          mfr: 'chevy',  initials: 'JL', wins: 0, pts: 391, diff: '-91',  playoffPts: 10, playoff: true },
+  { name: 'Sam Mayer',           mfr: 'chevy',  initials: 'SM', wins: 0, pts: 378, diff: '-104', playoffPts: 10, playoff: true },
+  { name: 'Josh Berry',          mfr: 'chevy',  initials: 'JB', wins: 0, pts: 364, diff: '-118', playoffPts:  5, playoff: false },
+  { name: 'Cole Custer',         mfr: 'chevy',  initials: 'CC', wins: 0, pts: 351, diff: '-131', playoffPts:  5, playoff: false },
+];
+
+// ── TRUCKS SERIES DATA ────────────────────────────────────────────────────────
+const trucksDrivers = [
+  { name: 'Corey Heim',       num: '51', team: 'TRICON Garage',         mfr: 'toyota', initials: 'CH', pos: 'P1',  gap: 'LEADER',  lapsLed: '45', speed: '129.3', stagePts: '10', fastLap: '31.441s', tireAge: '4 laps', isFastestLap: true,  ahead: null,           aheadGap: '',      behind: 'Ben Rhodes',      behindGap: '+0.844', posChange: 'same', freshTires: true,  pitInfo: 'FRESH TIRES', positions: [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], pits: [{stop:1,lap:60,dur:'11.8s',tires:'4 TIRES'},{stop:2,lap:125,dur:'11.5s',tires:'4 TIRES'}] },
+  { name: 'Ben Rhodes',       num: '99', team: 'ThorSport Racing',      mfr: 'ford',   initials: 'BR', pos: 'P2',  gap: '+0.844',  lapsLed: '8',  speed: '129.0', stagePts: '7',  fastLap: '31.612s', tireAge: '12 laps',                        ahead: 'Corey Heim',   aheadGap: '-0.844', behind: 'Zane Smith',      behindGap: '+0.621', posChange: 'up',   freshTires: false, pitInfo: '12 LAPS AGO', positions: [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2], pits: [{stop:1,lap:62,dur:'12.1s',tires:'4 TIRES'},{stop:2,lap:127,dur:'11.8s',tires:'4 TIRES'}] },
+  { name: 'Zane Smith',       num: '38', team: 'Front Row Motorsports', mfr: 'ford',   initials: 'ZS', pos: 'P3',  gap: '+1.465',  lapsLed: '12', speed: '128.7', stagePts: '8',  fastLap: '31.701s', tireAge: '16 laps',                        ahead: 'Ben Rhodes',   aheadGap: '-0.621', behind: 'Nick Sanchez',    behindGap: '+0.998', posChange: 'same', freshTires: false, pitInfo: '16 LAPS AGO', positions: [3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3], pits: [{stop:1,lap:64,dur:'12.3s',tires:'4 TIRES'},{stop:2,lap:130,dur:'12.0s',tires:'4 TIRES'}] },
+  { name: 'Nick Sanchez',     num: '2',  team: 'TRICON Garage',         mfr: 'toyota', initials: 'NS', pos: 'P4',  gap: '+2.463',  lapsLed: '5',  speed: '128.4', stagePts: '5',  fastLap: '31.801s', tireAge: '20 laps',                        ahead: 'Zane Smith',   aheadGap: '-0.998', behind: 'Grant Enfinger',  behindGap: '+1.112', posChange: 'down', freshTires: false, pitInfo: '20 LAPS AGO', positions: [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4], pits: [{stop:1,lap:66,dur:'12.5s',tires:'4 TIRES'},{stop:2,lap:132,dur:'12.2s',tires:'4 TIRES'}] },
+  { name: 'Grant Enfinger',   num: '9',  team: 'ThorSport Racing',      mfr: 'ford',   initials: 'GE', pos: 'P5',  gap: '+3.575',  lapsLed: '0',  speed: '128.1', stagePts: '4',  fastLap: '31.901s', tireAge: '24 laps',                        ahead: 'Nick Sanchez', aheadGap: '-1.112', behind: 'Christian Eckes', behindGap: '+1.234', posChange: 'up',   freshTires: false, pitInfo: '24 LAPS AGO', positions: [5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5], pits: [{stop:1,lap:68,dur:'12.7s',tires:'4 TIRES'},{stop:2,lap:134,dur:'12.4s',tires:'4 TIRES'}] },
+  { name: 'Christian Eckes',  num: '19', team: 'McAnally-Hilgemann',    mfr: 'chevy',  initials: 'CE', pos: 'P6',  gap: '+4.809',  lapsLed: '0',  speed: '127.8', stagePts: '3',  fastLap: '32.001s', tireAge: '18 laps',                        ahead: 'Grant Enfinger',aheadGap:'-1.234', behind: 'Matt Crafton',    behindGap: '+1.556', posChange: 'down', freshTires: false, pitInfo: '18 LAPS AGO', positions: [6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6], pits: [{stop:1,lap:70,dur:'12.9s',tires:'4 TIRES'},{stop:2,lap:136,dur:'12.6s',tires:'4 TIRES'}] },
+  { name: 'Matt Crafton',     num: '88', team: 'ThorSport Racing',      mfr: 'ford',   initials: 'MC', pos: 'P7',  gap: '+6.365',  lapsLed: '0',  speed: '127.4', stagePts: '2',  fastLap: '32.121s', tireAge: '28 laps',                        ahead: 'Christian Eckes',aheadGap:'-1.556',behind: 'Stewart Friesen', behindGap: '+1.102', posChange: 'same', freshTires: false, pitInfo: '28 LAPS AGO', positions: [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7], pits: [{stop:1,lap:72,dur:'13.1s',tires:'4 TIRES'},{stop:2,lap:138,dur:'12.8s',tires:'4 TIRES'}] },
+  { name: 'Stewart Friesen',  num: '52', team: 'Halmar Friesen',        mfr: 'chevy',  initials: 'SF', pos: 'P8',  gap: '+7.467',  lapsLed: '0',  speed: '127.0', stagePts: '1',  fastLap: '32.241s', tireAge: '22 laps',                        ahead: 'Matt Crafton', aheadGap: '-1.102', behind: 'Ty Majeski',      behindGap: '+1.803', posChange: 'down', freshTires: false, pitInfo: '22 LAPS AGO', positions: [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8], pits: [{stop:1,lap:74,dur:'13.3s',tires:'4 TIRES'},{stop:2,lap:140,dur:'13.0s',tires:'4 TIRES'}] },
+  { name: 'Ty Majeski',       num: '66', team: 'ThorSport Racing',      mfr: 'ford',   initials: 'TM', pos: 'P9',  gap: '+9.270',  lapsLed: '0',  speed: '126.6', stagePts: '0',  fastLap: '32.341s', tireAge: '26 laps',                        ahead: 'Stewart Friesen',aheadGap:'-1.803',behind: 'Chandler Smith',  behindGap: '+1.441', posChange: 'up',   freshTires: false, pitInfo: '26 LAPS AGO', positions: [9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9], pits: [{stop:1,lap:76,dur:'13.5s',tires:'4 TIRES'},{stop:2,lap:142,dur:'13.2s',tires:'4 TIRES'}] },
+  { name: 'Chandler Smith',   num: '18', team: 'Kyle Busch Motorsports', mfr: 'toyota', initials: 'CS', pos: 'P10', gap: '+10.711', lapsLed: '0',  speed: '126.2', stagePts: '0',  fastLap: '32.441s', tireAge: '30 laps',                        ahead: 'Ty Majeski',   aheadGap: '-1.441', behind: null,              behindGap: '',       posChange: 'up',   freshTires: false, pitInfo: '30 LAPS AGO', positions: [10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10], pits: [{stop:1,lap:78,dur:'13.7s',tires:'4 TIRES'},{stop:2,lap:144,dur:'13.4s',tires:'4 TIRES'}] },
+];
+
+const trucksSchedule = [
+  { track: 'Daytona International Speedway',  event: 'Fresh From Florida 250',                date: 'FEB 13', type: 'super', dist: '2.5 mi',   past: true,  tv: 'FS1',  time: '7:30PM ET' },
+  { track: 'Atlanta Motor Speedway',          event: 'FR8 208',                               date: 'FEB 21', type: 'super', dist: '1.54 mi',  past: true,  tv: 'FS1',  time: '1:30PM ET' },
+  { track: 'St. Petersburg',                  event: 'OnlyBulls Green Flag 150',              date: 'FEB 28', type: 'road',  dist: '1.8 mi',   past: true,  tv: 'FOX',  time: '12:00PM ET' },
+  { track: 'Darlington Raceway',              event: 'Buckle Up South Carolina 200',          date: 'MAR 20', type: 'oval',  dist: '1.366 mi', past: true,  tv: 'FS1',  time: '7:30PM ET' },
+  { track: 'Rockingham Speedway',             event: 'Black\'s Tire 200',                     date: 'APR 3',  type: 'oval',  dist: '1.017 mi', past: true,  tv: 'FS1',  time: '4:30PM ET' },
+  { track: 'Bristol Motor Speedway',          event: 'Tennessee Army National Guard 250',     date: 'APR 10', type: 'oval',  dist: '0.533 mi', past: true,  tv: 'FS1',  time: '7:30PM ET' },
+  { track: 'Texas Motor Speedway',            event: 'SpeedyCash.com 250',                    date: 'MAY 1',  type: 'oval',  dist: '1.5 mi',   past: true,  tv: 'FS1',  time: '8:00PM ET' },
+  { track: 'Watkins Glen International',      event: 'Bully Hill Vineyards 176',              date: 'MAY 8',  type: 'road',  dist: '2.454 mi', past: true,  tv: 'FS1',  time: '4:30PM ET' },
+  { track: 'Dover Motor Speedway',            event: 'ECOSAVE 200',                           date: 'MAY 15', type: 'oval',  dist: '1 mi',     past: true,  tv: 'FS1',  time: '5:00PM ET' },
+  { track: 'Charlotte Motor Speedway',        event: 'NC Education Lottery 200',              date: 'MAY 22', type: 'oval',  dist: '1.5 mi',   past: true,  tv: 'FS1',  time: '7:30PM ET' },
+  { track: 'Nashville Superspeedway',         event: 'Allegiance 200',                        date: 'MAY 29', type: 'oval',  dist: '1.333 mi', past: true,  tv: 'FS1',  time: '8:00PM ET' },
+  { track: 'Michigan International Speedway', event: 'DQS Solutions & Staffing 250',          date: 'JUN 6',  type: 'oval',  dist: '2 mi',     past: true,  tv: 'FS1',  time: '1:30PM ET' },
+  { track: 'Naval Base Coronado',             event: 'Navy 250',                              date: 'JUN 19', type: 'oval',  dist: '0.894 mi', past: true,  tv: 'FS1',  time: '7:00PM ET' },
+  { track: 'Lime Rock Park',                  event: 'LiUNA 150',                             date: 'JUL 11', type: 'road',  dist: '1.53 mi',  next: true,  tv: 'FS1',  time: '1:00PM ET' },
+  { track: 'North Wilkesboro Speedway',       event: 'Faithfest 250',                         date: 'JUL 18', type: 'oval',  dist: '0.625 mi', tv: 'FS1',  time: '12:30PM ET' },
+  { track: 'Lucas Oil Raceway Indianapolis',  event: 'TSport 200',                            date: 'JUL 24', type: 'oval',  dist: '0.686 mi', tv: 'FS1',  time: '8:00PM ET' },
+  { track: 'Richmond Raceway',                event: 'eero 250',                              date: 'AUG 14', type: 'oval',  dist: '0.75 mi',  tv: 'FS1',  time: '7:30PM ET' },
+  { track: 'New Hampshire Motor Speedway',    event: 'Team EJP 175',                          date: 'AUG 22', type: 'oval',  dist: '1.058 mi', tv: 'FS1',  time: '1:30PM ET' },
+  { track: 'Bristol Motor Speedway',          event: 'UNOH 200',                              date: 'SEP 17', type: 'oval',  dist: '0.533 mi', tv: 'FS1',  time: '8:00PM ET' },
+  { track: 'Kansas Speedway',                 event: 'Heart of Healthcare 200',               date: 'SEP 26', type: 'oval',  dist: '1.5 mi',   tv: 'FS1',  time: '1:00PM ET' },
+  { track: 'Charlotte Motor Speedway',        event: 'Ecosave 250',                           date: 'OCT 9',  type: 'oval',  dist: '1.5 mi',   tv: 'FOX',  time: '5:00PM ET' },
+  { track: 'Phoenix Raceway',                 event: 'TBA 150',                               date: 'OCT 16', type: 'oval',  dist: '1 mi',     tv: 'FS1',  time: '7:30PM ET' },
+  { track: 'Talladega Superspeedway',         event: 'Love\'s RV Stop 225',                   date: 'OCT 23', type: 'super', dist: '2.66 mi',  tv: 'FS1',  time: '4:00PM ET' },
+  { track: 'Martinsville Speedway',           event: 'Slim Jim 200',                          date: 'OCT 30', type: 'oval',  dist: '0.526 mi', tv: 'FS1',  time: '6:00PM ET' },
+  { track: 'Homestead-Miami Speedway',        event: 'Baptist Health 200',                    date: 'NOV 6',  type: 'oval',  dist: '1.5 mi',   tv: 'FS1',  time: '7:30PM ET' },
+];
+
+const trucksStandings = [
+  { name: 'Corey Heim',      mfr: 'toyota', initials: 'CH', wins: 3, pts: 398, diff: '–',   playoffPts: 38, playoff: true },
+  { name: 'Ben Rhodes',      mfr: 'ford',   initials: 'BR', wins: 1, pts: 374, diff: '-24', playoffPts: 17, playoff: true },
+  { name: 'Zane Smith',      mfr: 'ford',   initials: 'ZS', wins: 1, pts: 358, diff: '-40', playoffPts: 17, playoff: true },
+  { name: 'Nick Sanchez',    mfr: 'toyota', initials: 'NS', wins: 1, pts: 341, diff: '-57', playoffPts: 17, playoff: true },
+  { name: 'Grant Enfinger',  mfr: 'ford',   initials: 'GE', wins: 0, pts: 325, diff: '-73', playoffPts: 10, playoff: true },
+  { name: 'Christian Eckes', mfr: 'chevy',  initials: 'CE', wins: 0, pts: 309, diff: '-89', playoffPts: 10, playoff: true },
+  { name: 'Matt Crafton',    mfr: 'ford',   initials: 'MC', wins: 0, pts: 294, diff: '-104',playoffPts:  5, playoff: true },
+  { name: 'Stewart Friesen', mfr: 'chevy',  initials: 'SF', wins: 0, pts: 278, diff: '-120',playoffPts:  5, playoff: true },
+  { name: 'Ty Majeski',      mfr: 'ford',   initials: 'TM', wins: 0, pts: 261, diff: '-137',playoffPts:  0, playoff: false },
+  { name: 'Chandler Smith',  mfr: 'toyota', initials: 'CS', wins: 0, pts: 244, diff: '-154',playoffPts:  0, playoff: false },
+];
+
+// ── SERIES LOOKUP TABLES ──────────────────────────────────────────────────────
+window.SERIES_DRIVERS   = { 'nascar-cup': cupDrivers, 'nascar-xfinity': xfinityDrivers, 'nascar-trucks': trucksDrivers };
+const SERIES_SCHEDULE  = { 'nascar-cup': cupSchedule, 'nascar-xfinity': xfinitySchedule, 'nascar-trucks': trucksSchedule };
+const SERIES_STANDINGS = { 'nascar-cup': cupStandings, 'nascar-xfinity': xfinityStandings, 'nascar-trucks': trucksStandings };
+
+// ── RENDER HELPERS ────────────────────────────────────────────────────────────
+const mfrLabel = { chevy: 'C', toyota: 'T', ford: 'F' };
+
+function renderLeaderboard(drivers) {
+  const header = `
+    <div class="leaderboard-header">
+      <div class="lh-spacer" style="width:16px;"></div>
+      <div class="lh-spacer" style="width:44px;"></div>
+      <div class="lh-name">Driver</div>
+      <div class="lh-gap">Gap</div>
+      <div class="lh-lap">Last Lap</div>
+      <div class="lh-arr"></div>
+    </div>`;
+
+  const rows = drivers.map((d, i) => `
+    <div class="driver-row${i === 0 ? ' leader' : ''}" onclick="showDriver(${i})">
+      <div class="pos-num${i < 3 ? ' top3' : ''}">${i + 1}</div>
+      <div class="driver-photo-wrap">
+        <div class="driver-photo ${d.mfr}">${d.num}</div>
+        <div class="mfr-badge ${d.mfr}">${mfrLabel[d.mfr]}</div>
+        ${d.isFastestLap ? '<div class="fl-badge"><i class="ti ti-bolt"></i></div>' : ''}
+      </div>
+      <div class="driver-info">
+        <div class="driver-name">${d.name}</div>
+        <div class="driver-num">${String(d.team || '').toUpperCase()}</div>
+      </div>
+      <div class="driver-stats">
+        <div class="gap-time${i === 0 ? ' leader-gap' : d.gap === 'OFF' ? ' off-track' : ''}">${d.gap}</div>
+        ${d.lapsDown
+          ? `<div class="laps-down">${d.lapsDown}</div>`
+          : `<div class="pit-info${d.freshTires ? ' fresh' : ''}">${d.pitInfo || ''}</div>`}
+      </div>
+      <div class="lap-time-col${d.isFastestLap ? ' fastest' : ''}">${d.lastLapTime || '—'}</div>
+      <div class="pos-change ${d.posChange || 'same'}">${d.posChange === 'up' ? '▲' : d.posChange === 'down' ? '▼' : '–'}</div>
+    </div>
+    ${i === 4 ? '<div class="row-divider"></div>' : ''}`).join('');
+
+  document.getElementById('leaderboard').innerHTML = header + rows;
+}
+
+function renderSchedule(races) {
+  const typeLabel = { oval: 'Oval', road: 'Road Course', super: 'Superspeedway' };
+  document.getElementById('schedule-list').innerHTML = races.map(r => `
+    <div class="schedule-card${r.next ? ' next' : r.past ? ' past' : ''}${r.bracket ? ' bracket' : ''}">
+      <div class="sc-top">
+        <div>
+          ${r.past   ? '<div class="sc-completed-badge">Completed</div>' : ''}
+          ${r.next   ? '<div class="sc-next-badge">Next Race</div>'      : ''}
+          ${r.bracket && !r.past ? `<div class="sc-bracket-badge">In-Season Challenge — ${r.bracket}</div>` : ''}
+          <div class="sc-track">${r.track}</div>
+          <div class="sc-event">${r.event}</div>
+        </div>
+        <div class="sc-date">${r.date}</div>
+      </div>
+      <div class="sc-type">
+        <span class="sc-badge ${r.type}">${typeLabel[r.type] || r.type}</span>
+        <span class="sc-badge dist">${r.dist}</span>
+        ${r.tv ? `<span class="sc-badge${r.bracket && r.bracket === 'Championship' ? ' bracket-champ' : ' dist'}">${r.tv}</span>` : ''}
+      </div>
+      ${r.time && !r.past ? `<div class="sc-time">${r.time}</div>` : ''}
+      ${r.winner ? `<div class="sc-result">Winner <span>${r.winner}</span></div>` : ''}
+      ${r.sessions && !r.past ? `
+        <div class="sc-sessions">
+          ${r.sessions.map(s => `<div class="sc-session">${s.name} <span>${s.time}</span></div>`).join('')}
+        </div>` : ''}
+    </div>
+  `).join('');
+}
+
+function renderStandings(drivers, seriesId) {
+  const cutoff = PLAYOFF_CUTOFF[seriesId || currentSeries] || 16;
+  document.getElementById('standings-list').innerHTML = drivers.map((d, i) => `
+    ${i === cutoff ? `
+      <div class="cutline-row">
+        <div class="cutline-line"></div>
+        <div class="cutline-label">Playoff Cut</div>
+        <div class="cutline-line"></div>
+      </div>` : ''}
+    <div class="standings-row">
+      <div class="s-pos${i < 3 ? ' top3' : ''}">${i + 1}</div>
+      <div class="driver-photo-wrap" style="flex-shrink:0;">
+        <div class="driver-photo ${d.mfr}" style="width:32px;height:32px;font-size:10px;">${d.initials}</div>
+        <div class="mfr-badge ${d.mfr}">${mfrLabel[d.mfr]}</div>
+      </div>
+      <div class="s-name">${d.name}${d.playoff ? '<span class="p-tag">P</span>' : ''}</div>
+      <div class="s-wins">${d.wins}</div>
+      <div class="s-ppts">${d.playoffPts > 0 ? d.playoffPts : '—'}</div>
+      <div class="s-pts">${d.pts}</div>
+      <div class="s-diff">${d.diff}</div>
+    </div>
+  `).join('');
+}
+
+// ── DRIVER DETAIL ─────────────────────────────────────────────────────────────
+function drawSparkline(positions) {
+  const w = 320, h = 56, pad = 5;
+  const min = Math.min(...positions), max = Math.max(...positions);
+  const range = max - min || 1;
+  const pts = positions.map((p, i) => [
+    pad + (i / (positions.length - 1)) * (w - pad * 2),
+    pad + ((p - min) / range) * (h - pad * 2),
+  ]);
+  const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+  const last = pts.at(-1);
+  document.getElementById('spark-line').setAttribute('d', line);
+  document.getElementById('spark-area').setAttribute('d',
+    `${line} L${last[0].toFixed(1)},${h} L${pts[0][0].toFixed(1)},${h} Z`);
+  document.getElementById('spark-dot').setAttribute('cx', last[0].toFixed(1));
+  document.getElementById('spark-dot').setAttribute('cy', last[1].toFixed(1));
+}
+
+function buildPitLog(pits) {
+  document.getElementById('pit-log').innerHTML = pits.map(p => `
+    <div class="pit-entry">
+      <div class="pit-stop-num">#${p.stop}</div>
+      <div><span class="pit-lap-num">${p.lap}</span><span class="pit-lap-lbl"> lap</span></div>
+      <span class="pit-tire">${p.tires}</span>
+      <div class="pit-dur">${p.dur}</div>
+    </div>
+  `).join('');
+}
+
+function showDriver(idx) {
+  const drivers = window._liveDrivers || (window.SERIES_DRIVERS && window.SERIES_DRIVERS[currentSeries]) || cupDrivers;
+  const d = drivers[idx];
+  if (!d) return;
+  const mfrColors = {
+    chevy:  { border: '#ff4444', shadow: 'rgba(255,68,68,0.25)' },
+    toyota: { border: '#ffd600', shadow: 'rgba(255,214,0,0.25)' },
+    ford:   { border: '#3b82f6', shadow: 'rgba(59,130,246,0.25)' },
+  };
+  const mfrName = { chevy: 'Chevrolet', toyota: 'Toyota', ford: 'Ford' };
+
+  const photo = document.getElementById('dd-photo');
+  photo.textContent = `${d.num}`;
+  photo.style.borderColor = mfrColors[d.mfr].border;
+  photo.style.boxShadow = `0 0 16px ${mfrColors[d.mfr].shadow}`;
+
+  document.getElementById('dd-name').textContent = d.name;
+  document.getElementById('dd-meta').textContent = `#${d.num} · ${String(d.team || '').toUpperCase()} · ${mfrName[d.mfr]}`;
+  document.getElementById('dd-pos-badge').textContent = d.pos + (idx === 0 ? ' — LEADER' : '');
+  document.getElementById('dd-gap').textContent = d.gap;
+  document.getElementById('dd-laps-led').textContent = d.lapsLed;
+  document.getElementById('dd-speed').textContent = `${d.speed} mph`;
+  document.getElementById('dd-stage-pts').textContent = d.stagePts;
+  document.getElementById('dd-fast-lap').textContent = d.fastLap;
+  document.getElementById('dd-tire-age').textContent = d.tireAge;
+  document.getElementById('gt-self').textContent = d.name;
+  document.getElementById('gt-ahead').textContent = d.ahead || '— LEADER —';
+  document.getElementById('gt-ahead-gap').textContent = d.aheadGap;
+  document.getElementById('gt-behind').textContent = d.behind || '— LAST —';
+  document.getElementById('gt-behind-gap').textContent = d.behindGap;
+
+  drawSparkline(d.positions);
+  buildPitLog(d.pits);
+  setActiveScreen('driver');
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+function setActiveScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  ['live', 'schedule', 'standings'].forEach(n => {
+    document.getElementById('nav-' + n)?.classList.remove('active');
+    document.getElementById('snav-' + n)?.classList.remove('active');
+  });
+  if (name !== 'driver') {
+    document.getElementById('nav-' + name)?.classList.add('active');
+    document.getElementById('snav-' + name)?.classList.add('active');
+  }
+}
+
+function switchScreen(name) { setActiveScreen(name); }
+function goBack()            { setActiveScreen('live'); }
+
+function switchSeries(seriesId) {
+  if (seriesId === currentSeries) return; // no-op if same series
+
+  currentSeries = seriesId;
+
+  // ── Clear ALL per-series live state ──────────────────────────────────────
+  window._liveDrivers = null;
+  prevPositions = {};
+  // Clear position history for all cars so sparklines start fresh
+  Object.keys(positionHistory).forEach(k => delete positionHistory[k]);
+
+  // ── Update section labels ─────────────────────────────────────────────────
+  const meta = SERIES[seriesId];
+  const liveLabel = document.getElementById('live-series-lbl');
+  const schedLabel = document.getElementById('schedule-lbl');
+  const standLabel = document.getElementById('standings-lbl');
+  if (liveLabel)  liveLabel.textContent  = `${meta.label} — Live`;
+  if (schedLabel) schedLabel.textContent = `${meta.label} — Schedule`;
+  if (standLabel) standLabel.textContent = `${meta.label} — ${meta.season}`;
+
+  // ── Render series-specific placeholder data immediately ───────────────────
+  const drivers  = (window.SERIES_DRIVERS  && window.SERIES_DRIVERS[seriesId])  || cupDrivers;
+  const schedule = (SERIES_SCHEDULE  && SERIES_SCHEDULE[seriesId])  || cupSchedule;
+  const standing = (SERIES_STANDINGS && SERIES_STANDINGS[seriesId]) || cupStandings;
+  renderLeaderboard(drivers);
+  renderSchedule(schedule);
+  renderStandings(standing, seriesId);
+
+  // ── Fetch live API data — only if this series is still active when response comes back
+  if (NASCAR_SERIES_NUM[seriesId]) {
+    const targetSeries = seriesId; // capture for closure
+    fetchLiveFeedForSeries(targetSeries);
+    fetchScheduleForSeries(targetSeries);
+    fetchStandingsForSeries(targetSeries);
+  }
+}
+
+// Series-aware fetch wrappers — only render if series hasn't changed
+async function fetchLiveFeedForSeries(seriesId) {
+  try {
+    const res = await fetch(getFeeds(seriesId).live);
+    if (!res.ok) throw new Error('Feed error');
+    const data = await res.json();
+    // Only process if we're still on the same series
+    if (currentSeries !== seriesId) return;
+    liveData = data;
+    processLiveFeed(data);
+  } catch (e) {
+    console.warn('Live feed error:', e);
+  }
+}
+
+async function fetchScheduleForSeries(seriesId) {
+  try {
+    const res = await fetch(getFeeds(seriesId).schedule);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    if (currentSeries !== seriesId) return;
+    const races = processSchedule(data);
+    if (races && races.length) renderSchedule(races);
+  } catch (e) {
+    console.warn('Schedule fetch error:', e);
+  }
+}
+
+async function fetchStandingsForSeries(seriesId) {
+  try {
+    const res = await fetch(getFeeds(seriesId).standings);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    if (currentSeries !== seriesId) return;
+    const standings = processStandings(data);
+    if (standings && standings.length) renderStandings(standings, seriesId);
+  } catch (e) {
+    console.warn('Standings fetch error:', e);
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+// Render fallback data immediately so UI is never empty
+renderLeaderboard(window.SERIES_DRIVERS[currentSeries]);
+renderSchedule(SERIES_SCHEDULE[currentSeries]);
+renderStandings(SERIES_STANDINGS[currentSeries], currentSeries);
+
+// Start live data polling
+startPolling();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>
